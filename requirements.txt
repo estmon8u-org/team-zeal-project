@@ -42,7 +42,7 @@ diskcache==5.6.3
 distro==1.9.0
 docker-pycreds==0.4.0
 dpath==2.2.0
--e git+ssh://git@github.com-school/estmon8u/team-zeal-project.git@601c86441378917bcee4bdd710eedddf2a613d58#egg=drift_detector_pipeline
+-e git+ssh://git@github.com-school/estmon8u/team-zeal-project.git@ee12df2373cfe78a74a990457fcd9e8f8ff7a373#egg=drift_detector_pipeline
 dulwich==0.22.8
 dvc==3.59.1
 dvc-data==3.16.10
