@@ -71,7 +71,7 @@ distro==1.9.0
 docker-pycreds==0.4.0
 docopt==0.6.2
 dpath==2.2.0
--e git+ssh://git@github.com-school/estmon8u/team-zeal-project.git@4c54ac470ab145d74846aecd4da0f4ab6e52f7f3#egg=drift_detector_pipeline
+-e git+ssh://git@github.com-school/estmon8u/team-zeal-project.git@0073d8fc2f3249ee8aa297c26c480c82c22c08a3#egg=drift_detector_pipeline
 dulwich==0.22.8
 dvc==3.59.1
 dvc-data==3.16.10
