@@ -28,7 +28,12 @@ dependencies = [
     "python-dotenv",
     "ruff",
     "scikit-learn",
-    "dvc"
+    "dvc[gdrive]",
+    "wandb",
+    "torch",
+    "torchvision",
+    "timm",
+    "hydra-core"
 ]
 requires-python = ">=3.10"
 
