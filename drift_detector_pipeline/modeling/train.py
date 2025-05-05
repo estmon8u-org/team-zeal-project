@@ -3,19 +3,20 @@
 import logging
 import os
 import sys
-import torch
-import timm
-import wandb # Weights & Biases for experiment tracking
+
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from torch import nn
-from torch import optim
+import timm
+import torch
+from torch import nn, optim
 from torch.optim import lr_scheduler
-from torch.utils.data import DataLoader # We will import actual loaders later
+import wandb  # Weights & Biases for experiment tracking
+
 from drift_detector_pipeline.dataset import get_dataloaders
 
 # Setup logging
-log = logging.getLogger(__name__) # Hydra automatically configures this logger
+log = logging.getLogger(__name__)  # Hydra automatically configures this logger
+
 
 @hydra.main(config_path="../../conf", config_name="config", version_base=None)
 def train_model(cfg: DictConfig) -> None:
@@ -42,10 +43,12 @@ def train_model(cfg: DictConfig) -> None:
     try:
         wandb.init(
             project=cfg.wandb.project,
-            entity=cfg.wandb.entity if cfg.wandb.entity else None, # Use entity from config
-            config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True), # Log Hydra config
-            name=f"{cfg.model.name}-run-{wandb.util.generate_id()}", # Example run name
-            reinit=True # Allows re-running in notebooks/scripts
+            entity=cfg.wandb.entity if cfg.wandb.entity else None,  # Use entity from config
+            config=OmegaConf.to_container(
+                cfg, resolve=True, throw_on_missing=True
+            ),  # Log Hydra config
+            name=f"{cfg.model.name}-run-{wandb.util.generate_id()}",  # Example run name
+            reinit=True,  # Allows re-running in notebooks/scripts
         )
         log.info("WandB initialized successfully.")
     except Exception as e:
@@ -59,9 +62,7 @@ def train_model(cfg: DictConfig) -> None:
     # --- Model Setup ---
     log.info(f"Loading model: {cfg.model.name}")
     model = timm.create_model(
-        cfg.model.name,
-        pretrained=cfg.model.pretrained,
-        num_classes=cfg.model.num_classes
+        cfg.model.name, pretrained=cfg.model.pretrained, num_classes=cfg.model.num_classes
     )
     model.to(device)
     log.info("Model loaded successfully.")
@@ -76,9 +77,18 @@ def train_model(cfg: DictConfig) -> None:
 
     # Select optimizer based on config
     if cfg.training.optimizer.lower() == "adamw":
-        optimizer = optim.AdamW(model.parameters(), lr=cfg.training.learning_rate, weight_decay=cfg.training.weight_decay)
+        optimizer = optim.AdamW(
+            model.parameters(),
+            lr=cfg.training.learning_rate,
+            weight_decay=cfg.training.weight_decay,
+        )
     elif cfg.training.optimizer.lower() == "sgd":
-        optimizer = optim.SGD(model.parameters(), lr=cfg.training.learning_rate, momentum=0.9, weight_decay=cfg.training.weight_decay)
+        optimizer = optim.SGD(
+            model.parameters(),
+            lr=cfg.training.learning_rate,
+            momentum=0.9,
+            weight_decay=cfg.training.weight_decay,
+        )
     else:
         log.error(f"Unsupported optimizer: {cfg.training.optimizer}")
         sys.exit(1)
@@ -87,21 +97,25 @@ def train_model(cfg: DictConfig) -> None:
     # Select scheduler based on config
     scheduler = None
     if cfg.training.scheduler.lower() == "cosineannealinglr":
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.training.epochs) # T_max could be total steps if preferred
+        scheduler = lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=cfg.training.epochs
+        )  # T_max could be total steps if preferred
     elif cfg.training.scheduler.lower() == "steplr":
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1) # Example parameters
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)  # Example parameters
     elif cfg.training.scheduler.lower() != "none":
-         log.warning(f"Unsupported scheduler: {cfg.training.scheduler}. Training without scheduler.")
+        log.warning(
+            f"Unsupported scheduler: {cfg.training.scheduler}. Training without scheduler."
+        )
     if scheduler:
         log.info(f"Using scheduler: {cfg.training.scheduler}")
 
     # --- Training Loop ---
     log.info("Starting training loop...")
     best_val_accuracy = 0.0
-    model_save_path = "best_model.pth" # Relative path, saves to Hydra output dir
+    model_save_path = "best_model.pth"  # Relative path, saves to Hydra output dir
 
     for epoch in range(cfg.training.epochs):
-        model.train() # Set model to training mode
+        model.train()  # Set model to training mode
         running_loss = 0.0
         processed_batches = 0
 
@@ -120,16 +134,18 @@ def train_model(cfg: DictConfig) -> None:
             # Log training loss periodically to WandB
             if wandb_run and (i + 1) % cfg.wandb.log_freq == 0:
                 current_batch_loss = running_loss / processed_batches
-                wandb.log({
-                    "epoch": epoch + (i + 1) / len(train_loader), # Log fractional epoch
-                    "train_loss_batch": current_batch_loss,
-                    "learning_rate": optimizer.param_groups[0]['lr'] # Log current LR
-                 })
-                running_loss = 0.0 # Reset loss accumulator for next log period
+                wandb.log(
+                    {
+                        "epoch": epoch + (i + 1) / len(train_loader),  # Log fractional epoch
+                        "train_loss_batch": current_batch_loss,
+                        "learning_rate": optimizer.param_groups[0]["lr"],  # Log current LR
+                    }
+                )
+                running_loss = 0.0  # Reset loss accumulator for next log period
                 processed_batches = 0
 
         # --- Validation Loop ---
-        model.eval() # Set model to evaluation mode
+        model.eval()  # Set model to evaluation mode
         val_loss = 0.0
         correct = 0
         total = 0
@@ -145,21 +161,27 @@ def train_model(cfg: DictConfig) -> None:
 
         avg_val_loss = val_loss / len(val_loader)
         val_accuracy = 100 * correct / total
-        log.info(f"Epoch {epoch+1}/{cfg.training.epochs} - Val Loss: {avg_val_loss:.4f}, Val Acc: {val_accuracy:.2f}%")
+        log.info(
+            f"Epoch {epoch + 1}/{cfg.training.epochs} - Val Loss: {avg_val_loss:.4f}, Val Acc: {val_accuracy:.2f}%"
+        )
 
         # Log epoch metrics to WandB
         if wandb_run:
-            wandb.log({
-                "epoch": epoch + 1,
-                "val_loss_epoch": avg_val_loss,
-                "val_accuracy_epoch": val_accuracy
-            })
+            wandb.log(
+                {
+                    "epoch": epoch + 1,
+                    "val_loss_epoch": avg_val_loss,
+                    "val_accuracy_epoch": val_accuracy,
+                }
+            )
 
         # Save best model based on validation accuracy
         if val_accuracy > best_val_accuracy:
             best_val_accuracy = val_accuracy
             torch.save(model.state_dict(), model_save_path)
-            log.info(f"New best model saved with accuracy: {best_val_accuracy:.2f}% to {os.path.abspath(model_save_path)}")
+            log.info(
+                f"New best model saved with accuracy: {best_val_accuracy:.2f}% to {os.path.abspath(model_save_path)}"
+            )
 
         # Step the scheduler (if applicable)
         if scheduler:
@@ -175,6 +197,7 @@ def train_model(cfg: DictConfig) -> None:
         # artifact.add_file(model_save_path)
         # wandb.log_artifact(artifact)
         wandb.finish()
+
 
 if __name__ == "__main__":
     train_model()
