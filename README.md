@@ -76,19 +76,20 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     3.  Integrate configuration management (Hydra) and experiment tracking (WandB).
     4.  Structure the codebase for future drift simulation and detection implementation.
 
-## 3. Project Architecture Diagram
+## 3. Project Architecture Diagram (Phase 1)
 ![Phase 1 Architecture Diagram](./phase1.jpg)
+*(This diagram represents the components set up in Phase 1. It will evolve in subsequent phases.)*
 
 ## 4. Phase Deliverables
--   [ ] [PHASE1.md](./PHASE1.md): Project Design & Model Development
--   [ ] [PHASE2.md](./PHASE2.md): Enhancing ML Operations
--   [ ] [PHASE3.md](./PHASE3.md): Continuous ML & Deployment 
+-   [X] [PHASE1.md](./PHASE1.md): Project Design & Model Development *(Completed)*
+-   [ ] [PHASE2.md](./PHASE2.md): Enhancing ML Operations *(Upcoming)*
+-   [ ] [PHASE3.md](./PHASE3.md): Continuous ML & Deployment *(Upcoming)*
 
 ## 5. Setup Instructions
 
 1.  **Clone Repository:**
     ```bash
-    git clone git@github.com:estmon8u/team-zeal-project.git
+    git clone https://github.com/estmon8u/team-zeal-project.git # Or use SSH URL
     cd team-zeal-project
     ```
 2.  **Create & Activate Virtual Environment:**
@@ -107,59 +108,67 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     ```bash
     # Ensure pip is up-to-date
     python -m pip install --upgrade pip
-    # Install project core and development dependencies
+    # Install project core and development dependencies from pyproject.toml
     pip install -e .[dev]
     ```
-4.  **Set Up DVC Remote:**
-    -   Ensure you have access to the shared Google Drive folder used for DVC storage.
-    -   Authenticate DVC with Google Drive (if not already configured locally):
+4.  **Set Up DVC Remote (Google Drive):**
+    -   Ensure you have access permissions to the Google Drive folder specified in `.dvc/config` (ID: `19qyjvhry7pP9AF4q03hbKl4M5EWhrtk2`).
+    -   Authenticate DVC with Google Drive if needed (usually required once per machine):
         ```bash
-        # This might trigger browser authentication the first time
-        # Or might use existing credentials if available
-        dvc pull -r gdrive data/raw/imagenette2-160.tgz.dvc
+        # Run any dvc command that needs the remote, e.g., dvc pull
+        dvc pull data/raw/imagenette2-160.tgz.dvc
+        # Follow the browser authentication flow if prompted.
         ```
-        *(Note: For non-interactive environments like GitHub Actions, service account credentials configured via secrets are needed.)*
-5.  **Pull Data:**
+        *(Note: For non-interactive environments like CI/CD, service account credentials would be needed.)*
+5.  **Pull Raw Data:**
     ```bash
-    # Pull the raw dataset tracked by DVC
-    dvc pull
+    # Pull the raw dataset archive tracked by DVC
+    dvc pull data/raw/imagenette2-160.tgz.dvc
+    # Or pull everything tracked by DVC
+    # dvc pull
     ```
 
 ## 6. Usage Instructions
 
-1.  **Process Raw Data:**
-    -   Ensure raw data is pulled (see Setup Step 5).
-    -   Run the extraction script using the Makefile:
+1.  **Activate Environment:**
+    ```bash
+    source .venv/bin/activate # Or Windows equivalent
+    ```
+2.  **Process Raw Data (Extract Archive):**
+    -   Ensure raw data is pulled (Setup Step 5).
+    -   Run the extraction using the Makefile:
         ```bash
         make process_data
         ```
-    -   This will extract the `.tar.gz` file into `data/processed/imagenette2-160/`.
-
-2.  **Run Baseline Model Training:**
-    -   Ensure the virtual environment is activated.
-    -   Ensure WandB is set up (`wandb login` might be needed once).
-    -   Execute the training using the Makefile:
+    -   This extracts `data/raw/imagenette2-160.tgz` into `data/processed/imagenette2-160/`.
+3.  **Run Baseline Model Training:**
+    -   Ensure Weights & Biases is set up (run `wandb login` once if needed).
+    -   Execute the training using the Makefile (uses `conf/config.yaml` by default):
         ```bash
         make train
         ```
-    -   Monitor progress in the terminal and on your WandB project dashboard: `https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift`
-    -   Outputs (logs, best model) will be saved in the `outputs/YYYY-MM-DD/HH-MM-SS/` directory created by Hydra.
+    -   Monitor progress in the terminal and on your WandB project dashboard: [https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift](https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift)
+    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`) containing logs (`train.log`), Hydra configs (`.hydra/`), and the saved `best_model.pth`.
+    -   **Override Config:** You can change parameters via the command line using Hydra syntax, e.g.:
+        ```bash
+        python -m drift_detector_pipeline.modeling.train training.epochs=5 training.learning_rate=0.0005
+        ```
 
-## 7. Contribution Summary
--   Esteban Montelongo: [Description of contributions for Phase 1]
--   Sajith Bandara: [Description of contributions for Phase 1]
--   Arjun Kumar Sankar Chandrasekar: [Description of contributions for Phase 1]
+## 7. Contribution Summary (Phase 1)
+-   **Esteban Montelongo:** DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram.
+-   **Sajith Bandara:** Hydra integration (`conf/config.yaml`, `train.py` decorator/config usage), `train.py` core structure (model loading, optimizer, scheduler, loop), Makefile setup (`train`, `process_data` rules).
+-   **Arjun Kumar Sankar Chandrasekar:** WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting.
 
 ## 8. References & Key Tools Used
--   **Dataset:** [Imagenette-160](https://github.com/fastai/imagenette)
+-   **Dataset:** [Imagenette-160 (v2)](https://github.com/fastai/imagenette)
 -   **ML Framework:** [PyTorch](https://pytorch.org/)
 -   **Model Zoo:** [timm (PyTorch Image Models)](https://github.com/huggingface/pytorch-image-models)
 -   **Data Versioning:** [DVC (Data Version Control)](https://dvc.org/) + Google Drive
 -   **Configuration Management:** [Hydra](https://hydra.cc/)
 -   **Experiment Tracking:** [Weights & Biases (WandB)](https://wandb.ai/)
--   **Code Quality:** [Ruff](https://github.com/astral-sh/ruff)
+-   **Code Quality:** [Ruff](https://github.com/astral-sh/ruff) (Linting & Formatting)
 -   **Version Control:** [Git](https://git-scm.com/) & [GitHub](https://github.com/)
--   **Orchestration (Local):** [GNU Make](https://www.gnu.org/software/make/)
+-   **Build/Task Runner:** [GNU Make](https://www.gnu.org/software/make/)
 -   **Python Environment:** `venv` + `pip`
 
 ---
