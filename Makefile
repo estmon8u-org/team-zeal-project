@@ -59,6 +59,11 @@ create_environment:
 # PROJECT RULES                                                                 #
 #################################################################################
 
+# Example Makefile entry - Ensure paths match your script location
+process_data: data/processed/imagenette2-160 # Define target dir
+data/processed/imagenette2-160: data/raw/imagenette2-160.tgz
+	@echo "Processing raw data..."
+	python drift_detector_pipeline/dataset.py
 
 
 #################################################################################
