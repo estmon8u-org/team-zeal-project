@@ -12,28 +12,10 @@ from torch import nn
 from torch import optim
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader # We will import actual loaders later
-
-# Add project root to path to allow imports if run directly (optional, depends on execution)
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-# from drift_detector_pipeline.dataset import get_dataloaders # Placeholder for actual import
+from drift_detector_pipeline.dataset import get_dataloaders
 
 # Setup logging
 log = logging.getLogger(__name__) # Hydra automatically configures this logger
-
-# --- Placeholder for Data Loading ---
-# Replace this with actual import and call to get_dataloaders from dataset.py later
-def placeholder_get_dataloaders(cfg: DictConfig) -> tuple[DataLoader, DataLoader]:
-    log.warning("Using PLACEHOLDER data loaders. Implement actual data loading in dataset.py!")
-    # Create dummy dataloaders to allow script structure testing
-    # Each yields batches of (dummy_image_batch, dummy_label_batch)
-    dummy_train_data = [(torch.randn(cfg.training.batch_size, 3, cfg.data.img_size, cfg.data.img_size),
-                         torch.randint(0, cfg.model.num_classes, (cfg.training.batch_size,))) for _ in range(10)] # 10 dummy batches
-    dummy_val_data = [(torch.randn(cfg.training.batch_size, 3, cfg.data.img_size, cfg.data.img_size),
-                       torch.randint(0, cfg.model.num_classes, (cfg.training.batch_size,))) for _ in range(5)] # 5 dummy batches
-    train_loader = DataLoader(dummy_train_data, batch_size=None) # Batch size is already handled in dummy data
-    val_loader = DataLoader(dummy_val_data, batch_size=None)
-    return train_loader, val_loader
-# ----------------------------------
 
 @hydra.main(config_path="../../conf", config_name="config", version_base=None)
 def train_model(cfg: DictConfig) -> None:
@@ -56,6 +38,7 @@ def train_model(cfg: DictConfig) -> None:
     log.info(f"Using device: {device}")
 
     # Initialize Weights & Biases
+    wandb_run = None  # Create a separate variable to track if wandb is initialized
     try:
         wandb.init(
             project=cfg.wandb.project,
@@ -67,14 +50,10 @@ def train_model(cfg: DictConfig) -> None:
         log.info("WandB initialized successfully.")
     except Exception as e:
         log.error(f"Failed to initialize WandB: {e}")
-        wandb = None # Disable wandb logging if init fails
 
     # --- Data Loading ---
     log.info("Loading data...")
-    # !!! Replace placeholder with actual data loading function !!!
-    # from drift_detector_pipeline.dataset import get_dataloaders
-    # train_loader, val_loader = get_dataloaders(cfg)
-    train_loader, val_loader = placeholder_get_dataloaders(cfg)
+    train_loader, val_loader = get_dataloaders(cfg)
     log.info("Data loaded.")
 
     # --- Model Setup ---
@@ -139,7 +118,7 @@ def train_model(cfg: DictConfig) -> None:
             processed_batches += 1
 
             # Log training loss periodically to WandB
-            if wandb and (i + 1) % cfg.wandb.log_freq == 0:
+            if wandb_run and (i + 1) % cfg.wandb.log_freq == 0:
                 current_batch_loss = running_loss / processed_batches
                 wandb.log({
                     "epoch": epoch + (i + 1) / len(train_loader), # Log fractional epoch
@@ -169,7 +148,7 @@ def train_model(cfg: DictConfig) -> None:
         log.info(f"Epoch {epoch+1}/{cfg.training.epochs} - Val Loss: {avg_val_loss:.4f}, Val Acc: {val_accuracy:.2f}%")
 
         # Log epoch metrics to WandB
-        if wandb:
+        if wandb_run:
             wandb.log({
                 "epoch": epoch + 1,
                 "val_loss_epoch": avg_val_loss,
@@ -190,7 +169,7 @@ def train_model(cfg: DictConfig) -> None:
     log.info(f"Best Validation Accuracy: {best_val_accuracy:.2f}%")
 
     # Finish WandB run
-    if wandb:
+    if wandb_run:
         # Optionally: Save the final model as a WandB artifact
         # artifact = wandb.Artifact(f'{cfg.model.name}-final', type='model')
         # artifact.add_file(model_save_path)
