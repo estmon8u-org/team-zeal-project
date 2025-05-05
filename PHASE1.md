@@ -6,13 +6,13 @@
 
 *   **Problem Statement:** Develop an MLOps pipeline capable of training an image classifier, detecting performance degradation due to common data corruptions (drift), and automatically triggering retraining to maintain accuracy.
 *   **Project Objectives:**
-    1.  Achieve a baseline classification accuracy of ≥ 85% on the clean Imagenette-160 validation split using a fine-tuned ResNet-18 model.
+    1.  Achieve a baseline classification accuracy of ≥ 85% on the clean Imagenette-160 validation split using a fine-tuned ResNet-18 model. *(Status: Achieved - 96.76%)*
     2.  Implement a monitoring system capable of reliably detecting simulated drift scenarios (e.g., noise, brightness shifts) based on statistical tests or pre-defined thresholds. *(Note: Drift detection implementation is planned for Phase 2).*
     3.  Establish an automated retraining pipeline triggered by the detection of significant data drift. *(Note: Automation implementation is planned for Phase 2/3).*
 *   **Success Metrics:**
-    *   Model Performance: Top-1 Classification Accuracy (Baseline achieved in Phase 1).
-    *   Drift Detection: Drift Detection Rate / F1-score on simulated drift data (Evaluated in Phase 2).
-    *   Pipeline Automation: Successful execution rate of the automated retraining workflow (Evaluated in Phase 2/3).
+    *   Model Performance: Top-1 Classification Accuracy (Baseline: 96.76% achieved in Phase 1).
+    *   Drift Detection: Drift Detection Rate / F1-score on simulated drift data (To be evaluated in Phase 2).
+    *   Pipeline Automation: Successful execution rate of the automated retraining workflow (To be evaluated in Phase 2/3).
 
 ### **1.2 Selection of Data**
 
@@ -33,7 +33,7 @@
 *   **Rationale for Model Choice:** Strong baseline performance, computational efficiency suitable for course hardware/Colab, excellent pre-trained weights available via `timm`.
 *   **Architectural Summary:** Standard ResNet-18 architecture with residual blocks ([He et al., 2015](https://arxiv.org/abs/1512.03385)).
 *   **Source/Implementation:** Utilized `timm.create_model('resnet18', pretrained=True)` ([timm GitHub Repo](https://github.com/huggingface/pytorch-image-models)) via `train.py`, replacing the final classifier head for 10 classes (specified in `conf/config.yaml`).
-*   **Implementation Plan (Phase 1):** Loaded pre-trained model, adapted classifier, implemented basic fine-tuning loop (optimizer: AdamW, scheduler: CosineAnnealingLR configured via Hydra), integrated experiment tracking (WandB). *Status: Core logic implemented and functional in `drift_detector_pipeline/modeling/train.py`.*
+*   **Implementation (Phase 1):** Loaded pre-trained model, adapted classifier, implemented basic fine-tuning loop (optimizer: AdamW, scheduler: CosineAnnealingLR configured via Hydra), integrated experiment tracking (WandB). Saved best model based on validation accuracy. *(Status: Completed)*
 
 ### **1.4 Open-source Tools**
 
@@ -45,84 +45,89 @@
 ### **2.1 Repository Setup**
 
 *   **GitHub Repository:** Central repository created at: [https://github.com/estmon8u/team-zeal-project](https://github.com/estmon8u/team-zeal-project)
-*   **Project Structure:** Standard structure initialized using Cookiecutter Data Science template, including directories like `data/`, `models/`, `drift_detector_pipeline/` (source code), `conf/`, `tests/`, `docs/` and key files (`Makefile`, `.gitignore`, `pyproject.toml`).
+*   **Project Structure:** Standard structure initialized using Cookiecutter Data Science template, adapted for this project (see `README.md` for layout). Includes directories for source code (`drift_detector_pipeline/`), data (`data/`), models (`models/`), config (`conf/`), tests (`tests/`), docs (`docs/`) and key files (`Makefile`, `.gitignore`, `pyproject.toml`). *(Status: Completed)*
 
 ### **2.2 Environment Setup**
 
-*   **Python Virtual Environment:** Managed using `venv` and `pip`. Activated via `source .venv/bin/activate` (Mac/Linux) or equivalent (Windows).
-*   **Dependency Management:** Dependencies defined in `pyproject.toml` (for core structure and `flit`) and installed via `pip install -e .[dev]`. A full list including transitive dependencies is in `requirements.txt`. Key MLOps tools (`dvc[gdrive]`, `hydra-core`, `wandb`, `ruff`, `timm`) are included.
-*   **Development Platform:** Google Colab used for GPU-accelerated training runs; local environment used for code development and testing.
+*   **Python Virtual Environment:** Managed using `venv` and `pip`. Activated via `source .venv/bin/activate` (Mac/Linux) or equivalent (Windows). *(Status: Completed)*
+*   **Dependency Management:** Dependencies defined in `pyproject.toml` and installed via `pip install -e .[dev]`. A full list including transitive dependencies is in `requirements.txt`. Key MLOps tools (`dvc[gdrive]`, `hydra-core`, `wandb`, `ruff`, `timm`, `pytest`) are included. *(Status: Completed)*
+*   **Development Platform:** Google Colab used for GPU-accelerated training runs; local environment used for code development and testing. *(Status: Completed)*
 
 ## 3. Version Control & Collaboration
 
 ### **3.1 Git Usage**
 
-*   **Repository:** All code, configuration (`conf/config.yaml`), documentation (`README.md`, `PHASE1.md`), and DVC meta-files (`.dvc/config`, `data/raw/imagenette2-160.tgz.dvc`) tracked in the GitHub repository linked above.
-*   **Commit Practices:** Followed standard practices for frequent, atomic commits with descriptive messages (see `.git/logs/HEAD`).
-*   **Branching Strategy:** Development occurred primarily on `main` for Phase 1 setup. Branching (e.g., `feature/drift-simulation`, `feature/monitoring`) planned for future features/experiments.
-*   **Merging:** Pull Requests to be used for feature integration in later phases.
+*   **Repository:** All code, configuration (`conf/config.yaml`), documentation (`README.md`, `PHASE1.md`), and DVC meta-files (`.dvc/config`, `data/raw/imagenette2-160.tgz.dvc`, `models/resnet18_baseline_v1.pth.dvc`) tracked in the GitHub repository linked above. *(Status: Completed)*
+*   **Commit Practices:** Followed standard practices for frequent, atomic commits with descriptive messages. *(Status: Completed)*
+*   **Branching Strategy:** Development occurred primarily on `main` for Phase 1 setup. Branching planned for future features. *(Status: Baseline on main)*
+*   **Merging:** Pull Requests to be used for feature integration in later phases. *(Status: N/A for Phase 1)*
 
 ### **3.2 Team Collaboration**
 
 *   **Roles (Phase 1):**
-    *   Esteban Montelongo: DVC setup, Data extraction/loading script (`dataset.py`), Initial `README.md` / `PHASE1.md` structure.
-    *   Sajith Bandara: Hydra setup (`config.yaml`), Training script structure (`train.py`), Makefile setup & `process_data` rule.
-    *   Arjun Kumar Sankar Chandrasekar: WandB integration in `train.py`, `pyproject.toml`/`requirements.txt` management, `ruff` setup and formatting.
-*   **Communication:** Primary communication via MS Teams channel 'Team Zeal SE489'. *(Adjust if different)*
-*   **Code Reviews:** Conducted informally for Phase 1 setup. Formal Pull Request reviews planned for Phase 2 onwards.
-*   **Merge Conflict Resolution:** N/A for Phase 1. Standard Git merge/rebase strategy planned.
+    *   Esteban Montelongo: DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram, model DVC tracking.
+    *   Sajith Bandara: Hydra integration (`conf/config.yaml`, `train.py` decorator/config usage), `train.py` core structure (model loading, optimizer, scheduler, loop), Makefile setup (`train`, `process_data` rules), model saving path correction.
+    *   Arjun Kumar Sankar Chandrasekar: WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting, setup testing infrastructure.
+*   **Communication:** Primary communication via MS Teams channel 'Team Zeal SE489'. *(Status: Ongoing)*
+*   **Code Reviews:** Conducted informally for Phase 1 setup. Formal Pull Request reviews planned for Phase 2 onwards. *(Status: Informal completed)*
+*   **WandB Team:** Collaboration established using the `emontel1-depaul-university` WandB entity. Teammates invited and can view/log runs. *(Status: Completed)*
 
 ## 4. Data Handling
 
 ### **4.1 Data Preparation**
 
-*   **Data Acquisition & Versioning:** Imagenette-160 (`.tar.gz`) downloaded to `data/raw/`, tracked by DVC (metafile `data/raw/imagenette2-160.tgz.dvc`), and pushed to the configured Google Drive remote. Raw data directory (`/data/raw/*`) is correctly ignored by Git.
-*   **Preprocessing Script:** Raw data extraction logic implemented in `drift_detector_pipeline/dataset.py` (`extract_data` function), runnable via `make process_data`. Extracted data resides in `data/processed/imagenette2-160/` (ignored by Git).
-*   **Dataset Loading:** PyTorch `DataLoaders` implemented in `drift_detector_pipeline/dataset.py` (`get_dataloaders` function) using `torchvision.datasets.ImageFolder` on the processed data path, applying transformations defined in `get_transforms`. Parameters (batch size, workers) configured via Hydra (`conf/config.yaml`).
+*   **Data Acquisition & Versioning:** Imagenette-160 (`.tar.gz`) downloaded to `data/raw/`, tracked by DVC (metafile `data/raw/imagenette2-160.tgz.dvc`), and pushed to the configured Google Drive remote. *(Status: Completed)*
+*   **Preprocessing Script:** Raw data extraction logic implemented in `drift_detector_pipeline/dataset.py` (`extract_data` function), runnable via `make process_data`. *(Status: Completed)*
+*   **Dataset Loading:** PyTorch `DataLoaders` implemented in `drift_detector_pipeline/dataset.py` (`get_dataloaders` function) using `torchvision.datasets.ImageFolder`, applying transformations defined in `get_transforms`. *(Status: Completed)*
 
 ### **4.2 Data Documentation**
 
-*   **README:** Basic structure included in `README.md` (Setup/Usage sections).
-*   **Script Documentation:** *[Status: In Progress]* Docstrings and comments added to `dataset.py` and `train.py`, but require final review and completion for full clarity.
+*   **README:** Basic structure included in `README.md` (Setup/Usage sections). *(Status: Completed)*
+*   **Script Documentation:** *[Status: In Progress]* Docstrings and comments added to `dataset.py` and `train.py`, final review pending.
 
 ## 5. Model Training
 
 ### **5.1 Training Infrastructure**
 
-*   **Platform:** Baseline training executed successfully on Google Colab GPU. *(Adjust if different)*
-*   **Environment:** Setup reproducible via cloning repo and `pip install -e .[dev]`.
-*   **Configuration:** Managed centrally via Hydra (`conf/config.yaml`).
-*   **Experiment Tracking:** Weights & Biases (WandB) used for logging metrics (loss, accuracy), hyperparameters, and system stats. Runs logged to project `zeal-imagenette-drift` under entity `emontel1-depaul-university`.
+*   **Platform:** Baseline training executed successfully on Google Colab GPU / Local CPU. *(Specify which or both)*. *(Status: Completed)*
+*   **Environment:** Setup reproducible via cloning repo and `pip install -e .[dev]`. *(Status: Completed)*
+*   **Configuration:** Managed centrally via Hydra (`conf/config.yaml`). *(Status: Completed)*
+*   **Experiment Tracking:** Weights & Biases (WandB) used for logging metrics, hyperparameters. Runs logged to project `zeal-imagenette-drift` under entity `emontel1-depaul-university`. *(Status: Completed)*
 
 ### **5.2 Initial Model Training & Evaluation**
 
-*   **Training Script:** Implemented in `drift_detector_pipeline/modeling/train.py`, integrating Hydra, WandB, `timm`, and data loaders. Runnable via `make train`.
-*   **Baseline Training:** *[Status: Completed]* Initial training run executed for 10 epochs. Baseline validation accuracy goal (≥85%) achieved/not achieved [**Team Zeal: Please update with your actual result here, e.g., "Achieved 87.5% validation accuracy..."**]. Link to relevant WandB run: [**Team Zeal: Add link to your WandB run here**].
-*   **Evaluation:** Top-1 Accuracy on validation set tracked per epoch via WandB.
-*   **Model Saving:** Best model checkpoint (based on validation accuracy) saved automatically by `train.py` to the Hydra output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/best_model.pth`). *(Note: DVC tracking for the saved model artifact should be added in subsequent steps/phases).*
+*   **Training Script:** Implemented in `drift_detector_pipeline/modeling/train.py`, runnable via `make train`. *(Status: Completed)*
+*   **Baseline Training:** Initial training run executed for 10 epochs. Baseline validation accuracy goal (≥85%) **achieved**, reaching **96.76%**. *(Status: Completed)*
+*   **WandB Run Link:** [**Team Zeal: Insert direct link to the specific WandB run page here**]
+*   **Evaluation:** Top-1 Accuracy on validation set tracked per epoch via WandB. *(Status: Completed)*
+*   **Model Saving & Versioning:** Best model checkpoint (based on validation accuracy) saved automatically by `train.py` to the Hydra output directory. This artifact was then manually added to DVC tracking as `models/resnet18_baseline_v1.pth` and pushed to the remote. *(Status: Completed)*
 
 ## 6. Documentation & Reporting
 
 ### **6.1 Project README**
 
-*   **Status:** *[Status: Updated]* Main `README.md` updated with setup, usage, architecture diagram, and tool list based on Phase 1 progress. Contribution summary needs final input from team members.
+*   **Status:** *[Status: Updated]* Main `README.md` updated with setup, usage, architecture diagram, contribution summary, and tool list based on Phase 1 progress.
 
 ### **6.2 Code Documentation**
 
-*   **Docstrings:** *[Status: In Progress]* Present in key functions (`train.py`, `dataset.py`), but need review for completeness and consistency.
-*   **Inline Comments:** *[Status: In Progress]* Added for some complex parts, review needed.
-*   **Code Styling & Formatting (`ruff`):** *[Status: Completed]* Code formatted using `ruff format` (commit `1bed2aa...`). `lint` command available in Makefile. Ruff configured in `pyproject.toml`.
-*   **Type Checking (`mypy`):** *[Status: Not Implemented]* Type hints added to functions, but `mypy` is not yet installed or run as part of checks. *(Optional: Add mypy to dev dependencies and Makefile lint step)*.
-*   **Makefile Documentation:** *[Status: Completed]* Targets have `## Help text` comments for self-documentation via `make help`.
+*   **Docstrings:** *[Status: In Progress]* Present in key functions, review pending.
+*   **Inline Comments:** *[Status: In Progress]* Added for some parts, review pending.
+*   **Code Styling & Formatting (`ruff`):** *[Status: Completed]* Code formatted using `ruff format`. `lint` command available in Makefile.
+*   **Type Checking (`mypy`):** *[Status: Not Implemented]* Type hints added, but `mypy` checks not yet integrated.
+*   **Makefile Documentation:** *[Status: Completed]* Targets have `## Help text` comments.
+*   **Testing:** *[Status: Placeholder]* Basic test file `tests/test_data.py` exists with a placeholder test. `pytest` installed. Running `make test` currently fails. *(Action Item: Implement actual unit tests)*.
 
 ---
 
-**Final Steps Reminder for Team Zeal (Phase 1):**
+**Phase 1 Completion Checklist:**
 
-*   Fill in the actual baseline accuracy achieved and link the WandB run in section 5.2.
-*   Fill in the contribution details in section 3.2 (and README section 7).
-*   Review and finalize docstrings/comments in the code (`dataset.py`, `train.py`).
-*   (Optional) Add and run `mypy` checks.
-*   (Recommended) Add the saved `best_model.pth` from a successful run to DVC tracking (`dvc add outputs/RUN_DIR/best_model.pth -o models/resnet18_baseline.pth`) and commit the new `.dvc` file.
-*   Do one last `git add .`, `git commit -m "Finalize Phase 1 deliverables"`, and `git push`.
-*   Ensure one team member submits the GitHub repository link on D2L.
+*   [X] Baseline training run completed and results logged.
+*   [X] Model performance meets/exceeds target (96.76% > 85%).
+*   [X] Code, config, DVC meta-files committed to Git.
+*   [X] Raw data versioned with DVC and pushed to remote.
+*   [X] Baseline model artifact versioned with DVC and pushed to remote.
+*   [X] WandB collaboration set up and run logged to shared entity.
+*   [X] Code formatting applied (`ruff format`).
+*   [X] Documentation (`README.md`, `PHASE1.md`) updated with results and status.
+*   [ ] Implement and pass at least one basic unit test. *(Remaining Action Item)*
+*   [ ] Final review of code documentation (docstrings, comments). *(Remaining ActionItem)*

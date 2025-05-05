@@ -71,14 +71,14 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
 -   **Summary:** This project implements an end-to-end MLOps pipeline to train an image classification model (ResNet-18 using `timm`) on the Imagenette-160 dataset, monitor for data drift, and eventually automate retraining.
 -   **Problem Statement:** Machine learning models deployed in production often suffer performance degradation over time due to changes in the underlying data distribution (data drift). This project aims to build a system that can automatically detect such drift in an image classification task and maintain model performance through automated retraining.
 -   **Main Objectives (Phase 1 Focus):**
-    1.  Establish a reproducible baseline training pipeline for ResNet-18 on clean Imagenette-160 data, achieving ≥85% validation accuracy.
-    2.  Set up version control for data (DVC) and code (Git).
-    3.  Integrate configuration management (Hydra) and experiment tracking (WandB).
-    4.  Structure the codebase for future drift simulation and detection implementation.
+    1.  Establish a reproducible baseline training pipeline for ResNet-18 on clean Imagenette-160 data, achieving ≥85% validation accuracy. *(Achieved: 96.76%)*
+    2.  Set up version control for data (DVC) and code (Git). *(Completed)*
+    3.  Integrate configuration management (Hydra) and experiment tracking (WandB). *(Completed)*
+    4.  Structure the codebase for future drift simulation and detection implementation. *(Completed)*
 
 ## 3. Project Architecture Diagram (Phase 1)
 ![Phase 1 Architecture Diagram](./phase1.jpg)
-*(This diagram represents the components set up in Phase 1. It will evolve in subsequent phases.)*
+*(This diagram represents the components set up in Phase 1: Data acquisition/versioning with DVC/G-Drive, Code versioning with Git/GitHub, Training pipeline using PyTorch/timm, Configuration via Hydra, Experiment Tracking via WandB, and local execution via Make.)*
 
 ## 4. Phase Deliverables
 -   [X] [PHASE1.md](./PHASE1.md): Project Design & Model Development *(Completed)*
@@ -122,10 +122,12 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
         # Example command to trigger authentication if needed:
         dvc pull data/raw/imagenette2-160.tgz.dvc
         ```
-6.  **Pull Raw Data:**
+6.  **Pull Raw Data & Baseline Model:**
     ```bash
     # Pull the raw dataset archive tracked by DVC using the authenticated remote
     dvc pull data/raw/imagenette2-160.tgz.dvc
+    # Pull the baseline model checkpoint
+    dvc pull models/resnet18_baseline_v1.pth.dvc
     # Or pull everything tracked by DVC
     # dvc pull
     ```
@@ -137,7 +139,7 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     source .venv/bin/activate # Or Windows equivalent
     ```
 2.  **Process Raw Data (Extract Archive):**
-    -   Ensure raw data is pulled (Setup Step 5).
+    -   Ensure raw data is pulled (Setup Step 6).
     -   Run the extraction using the Makefile:
         ```bash
         make process_data
@@ -150,16 +152,25 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
         make train
         ```
     -   Monitor progress in the terminal and on your WandB project dashboard: [https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift](https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift)
-    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`) containing logs (`train.log`), Hydra configs (`.hydra/`), and the saved `best_model.pth`.
+    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`) containing logs (`train.log`), Hydra configs (`.hydra/`), and the saved `best_model.pth`. The best model from the run is automatically versioned by DVC after manual addition (see step 5.2 in PHASE1.md).
     -   **Override Config:** You can change parameters via the command line using Hydra syntax, e.g.:
         ```bash
         python -m drift_detector_pipeline.modeling.train training.epochs=5 training.learning_rate=0.0005
         ```
+4.  **(Optional) Run Linting/Formatting:**
+    ```bash
+    make lint  # Check formatting and linting
+    make format # Apply formatting and fix linting issues
+    ```
+5.  **(Optional) Run Tests:** [Incomplete]
+    ```bash
+    make test # Run unit tests located in the tests/ directory
+    ```
 
 ## 7. Contribution Summary (Phase 1)
--   **Esteban Montelongo:** DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram.
--   **Sajith Bandara:** Hydra integration (`conf/config.yaml`, `train.py` decorator/config usage), `train.py` core structure (model loading, optimizer, scheduler, loop), Makefile setup (`train`, `process_data` rules).
--   **Arjun Kumar Sankar Chandrasekar:** WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting.
+-   **Esteban Montelongo:** DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram, model DVC tracking.
+-   **Sajith Bandara:** Hydra integration (`conf/config.yaml`, `train.py` decorator/config usage), `train.py` core structure (model loading, optimizer, scheduler, loop), Makefile setup (`train`, `process_data` rules), model saving path correction.
+-   **Arjun Kumar Sankar Chandrasekar:** WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting, setup testing infrastructure.
 
 ## 8. References & Key Tools Used
 -   **Dataset:** [Imagenette-160 (v2)](https://github.com/fastai/imagenette)
@@ -168,9 +179,7 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
 -   **Data Versioning:** [DVC (Data Version Control)](https://dvc.org/) + Google Drive
 -   **Configuration Management:** [Hydra](https://hydra.cc/)
 -   **Experiment Tracking:** [Weights & Biases (WandB)](https://wandb.ai/)
--   **Code Quality:** [Ruff](https://github.com/astral-sh/ruff) (Linting & Formatting)
+-   **Code Quality:** [Ruff](https://github.com/astral-sh/ruff) (Linting & Formatting), [Pytest](https://pytest.org/) (Testing)
 -   **Version Control:** [Git](https://git-scm.com/) & [GitHub](https://github.com/)
 -   **Build/Task Runner:** [GNU Make](https://www.gnu.org/software/make/)
 -   **Python Environment:** `venv` + `pip`
-
----
