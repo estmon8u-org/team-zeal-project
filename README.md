@@ -111,18 +111,20 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     # Install project core and development dependencies from pyproject.toml
     pip install -e .[dev]
     ```
-4.  **Set Up DVC Remote (Google Drive):**
-    -   Ensure you have access permissions to the Google Drive folder specified in `.dvc/config` (ID: `19qyjvhry7pP9AF4q03hbKl4M5EWhrtk2`).
-    -   Authenticate DVC with Google Drive if needed (usually required once per machine):
+4.  **Accept WandB Team Invitation & Login (First Time Only):**
+    *   Ensure you have accepted the invitation to join the **`emontel1-depaul-university`** team/entity on WandB (check your email or WandB notifications). You'll need a free WandB account associated with the invited email address.
+    *   Run `wandb login` in your terminal and follow the prompts to authenticate your WandB account if you haven't used WandB on this machine before. This ensures your runs log to the shared team project.
+
+5.  **Set Up DVC Remote (Google Drive - First Time Only):**
+    *   **Permissions:** Ensure the Google Drive folder (ID: `19qyjvhry7pP9AF4q03hbKl4M5EWhrtk2`, specified in `.dvc/config`) has been shared with your `@depaul.edu/@gmail.com` Google account with **Editor** permissions by the project lead.
+    *   **Authenticate DVC:** The first time you run a command like `dvc pull`, you will be prompted to authenticate DVC with Google Drive via your browser. Follow the instructions, making sure to log in with your **`@depaul.edu/@gmail.com`** Google account and grant permissions.
         ```bash
-        # Run any dvc command that needs the remote, e.g., dvc pull
+        # Example command to trigger authentication if needed:
         dvc pull data/raw/imagenette2-160.tgz.dvc
-        # Follow the browser authentication flow if prompted.
         ```
-        *(Note: For non-interactive environments like CI/CD, service account credentials would be needed.)*
-5.  **Pull Raw Data:**
+6.  **Pull Raw Data:**
     ```bash
-    # Pull the raw dataset archive tracked by DVC
+    # Pull the raw dataset archive tracked by DVC using the authenticated remote
     dvc pull data/raw/imagenette2-160.tgz.dvc
     # Or pull everything tracked by DVC
     # dvc pull
