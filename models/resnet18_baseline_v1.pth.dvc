@@ -1,0 +1,5 @@
+outs:
+- md5: 258d43c0241a8d6bdef8cc00b621bc4b
+  size: 44805451
+  hash: md5
+  path: resnet18_baseline_v1.pth
