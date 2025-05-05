@@ -1,0 +1,47 @@
+# conf/config.yaml
+
+# --- Data Parameters ---
+data:
+  raw_path: "data/raw/imagenette2-160.tgz"         # Path to the raw archive (relative to root)
+  processed_path: "data/processed/imagenette2-160" # Path to extracted train/val folders
+  img_size: 224                                    # Target image size for the model
+  dataloader_workers: 2                            # Number of workers for DataLoader
+
+# --- Model Parameters ---
+model:
+  name: "resnet18"       # Name of the model from timm
+  pretrained: True       # Load ImageNet pre-trained weights
+  num_classes: 10        # Number of classes in Imagenette
+
+# --- Training Parameters ---
+training:
+  # freeze_layers: 2      # Optional: Number of initial stages to freeze (e.g., 0=none, 1, 2...) - uncomment if using
+  epochs: 10             # Number of training epochs
+  batch_size: 64         # Adjust based on GPU memory
+  learning_rate: 1e-3
+  weight_decay: 0.01
+  optimizer: "AdamW"     # Options: AdamW, SGD, etc.
+  scheduler: "CosineAnnealingLR" # Options: CosineAnnealingLR, StepLR, None
+  label_smoothing: 0.1
+
+# --- Runtime Parameters ---
+run:
+  seed: 42               # Random seed for reproducibility
+  device: "cuda"         # Target device: "cuda" or "cpu"
+
+# --- Experiment Tracking (WandB) ---
+wandb:
+  project: "zeal-imagenette-drift"  # Your WandB project name
+  entity: "emontel1-depaul-university" # Optional: Your WandB username or team name
+  log_freq: 100                   # Log metrics every N batches
+ 
+
+# --- Hydra Settings (Defaults are usually fine) ---
+hydra:
+  run:
+    # Output directory pattern: outputs/YYYY-MM-DD/HH-MM-SS
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    # Output directory pattern for multirun: multirun/YYYY-MM-DD/HH-MM-SS
+    dir: multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num} # Subdirectory for each job in a sweep
