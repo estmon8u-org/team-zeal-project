@@ -45,6 +45,10 @@ format:
 test:
 	python -m pytest tests
 
+## Train run
+.PHONY: train
+train:
+	python -m drift_detector_pipeline.modeling.train
 
 ## Set up Python interpreter environment
 .PHONY: create_environment
