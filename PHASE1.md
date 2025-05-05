@@ -50,7 +50,7 @@
 ### **2.2 Environment Setup**
 
 *   **Python Virtual Environment:** Managed using `venv` and `pip`. Activated via `source .venv/bin/activate` (Mac/Linux) or equivalent (Windows). *(Status: Completed)*
-*   **Dependency Management:** Dependencies defined in `pyproject.toml` and installed via `pip install -e .[dev]`. A full list including transitive dependencies is in `requirements.txt`. Key MLOps tools (`dvc[gdrive]`, `hydra-core`, `wandb`, `ruff`, `timm`, `pytest`) are included. *(Status: Completed)*
+*   **Dependency Management:** Dependencies defined in `pyproject.toml` and installed via `pip install -e .`. A full list including transitive dependencies is in `requirements.txt`. Key MLOps tools (`dvc[gdrive]`, `hydra-core`, `wandb`, `ruff`, `timm`, `pytest`) are included. *(Status: Completed)*
 *   **Development Platform:** Google Colab used for GPU-accelerated training runs; local environment used for code development and testing. *(Status: Completed)*
 
 ## 3. Version Control & Collaboration
@@ -58,16 +58,16 @@
 ### **3.1 Git Usage**
 
 *   **Repository:** All code, configuration (`conf/config.yaml`), documentation (`README.md`, `PHASE1.md`), and DVC meta-files (`.dvc/config`, `data/raw/imagenette2-160.tgz.dvc`, `models/resnet18_baseline_v1.pth.dvc`) tracked in the GitHub repository linked above. *(Status: Completed)*
-*   **Commit Practices:** Followed standard practices for frequent, atomic commits with descriptive messages. *(Status: Completed)*
-*   **Branching Strategy:** Development occurred primarily on `main` for Phase 1 setup. Branching planned for future features. *(Status: Baseline on main)*
-*   **Merging:** Pull Requests to be used for feature integration in later phases. *(Status: N/A for Phase 1)*
+*   **Commit Practices:** Followed standard practices for frequent, atomic commits with descriptive messages (e.g., `ac199a43e95ef05f0a80ad7dbb511eaa6458e127` - "Adding simple unit tests"). *(Status: Completed)*
+*   **Branching Strategy:** Development occurred on `main` and `develop` branches during Phase 1, with merges into `main`. *(Status: Completed)*
+*   **Merging:** Merges from `develop` to `main` performed. Pull Requests planned for future feature integration. *(Status: Completed)*
 
 ### **3.2 Team Collaboration**
 
-*   **Roles (Phase 1):**
-    *   Esteban Montelongo: DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram, model DVC tracking.
+*   **Roles (Phase 1 - Inferred):**
+    *   Esteban Montelongo: DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram, model DVC tracking, unit test implementation.
     *   Sajith Bandara: Hydra integration (`conf/config.yaml`, `train.py` decorator/config usage), `train.py` core structure (model loading, optimizer, scheduler, loop), Makefile setup (`train`, `process_data` rules), model saving path correction.
-    *   Arjun Kumar Sankar Chandrasekar: WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting, setup testing infrastructure.
+    *   Arjun Kumar Sankar Chandrasekar: WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting, testing infrastructure setup and test contributions.
 *   **Communication:** Primary communication via MS Teams channel 'Team Zeal SE489'. *(Status: Ongoing)*
 *   **Code Reviews:** Conducted informally for Phase 1 setup. Formal Pull Request reviews planned for Phase 2 onwards. *(Status: Informal completed)*
 *   **WandB Team:** Collaboration established using the `emontel1-depaul-university` WandB entity. Teammates invited and can view/log runs. *(Status: Completed)*
@@ -82,15 +82,15 @@
 
 ### **4.2 Data Documentation**
 
-*   **README:** Basic structure included in `README.md` (Setup/Usage sections). *(Status: Completed)*
-*   **Script Documentation:** *[Status: In Progress]* Docstrings and comments added to `dataset.py` and `train.py`, final review pending.
+*   **README:** Main `README.md` includes Setup/Usage sections. *(Status: Completed)*
+*   **Script Documentation:** Docstrings and comments added to `dataset.py` and `train.py`. *(Status: Completed)*
 
 ## 5. Model Training
 
 ### **5.1 Training Infrastructure**
 
-*   **Platform:** Baseline training executed successfully on Google Colab GPU / Local CPU. *(Specify which or both)*. *(Status: Completed)*
-*   **Environment:** Setup reproducible via cloning repo and `pip install -e .[dev]`. *(Status: Completed)*
+*   **Platform:** Baseline training executed successfully on Google Colab GPU / Local CPU. *(Status: Completed)*
+*   **Environment:** Setup reproducible via cloning repo and `pip install -e .`. *(Status: Completed)*
 *   **Configuration:** Managed centrally via Hydra (`conf/config.yaml`). *(Status: Completed)*
 *   **Experiment Tracking:** Weights & Biases (WandB) used for logging metrics, hyperparameters. Runs logged to project `zeal-imagenette-drift` under entity `emontel1-depaul-university`. *(Status: Completed)*
 
@@ -98,24 +98,24 @@
 
 *   **Training Script:** Implemented in `drift_detector_pipeline/modeling/train.py`, runnable via `make train`. *(Status: Completed)*
 *   **Baseline Training:** Initial training run executed for 10 epochs. Baseline validation accuracy goal (≥85%) **achieved**, reaching **96.76%**. *(Status: Completed)*
-*   **WandB Run Link:** [**Team Zeal: Insert direct link to the specific WandB run page here**]
+*   **WandB Run Link:** [https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift](https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift) *(Placeholder - Insert direct link to the specific run if available)*
 *   **Evaluation:** Top-1 Accuracy on validation set tracked per epoch via WandB. *(Status: Completed)*
-*   **Model Saving & Versioning:** Best model checkpoint (based on validation accuracy) saved automatically by `train.py` to the Hydra output directory. This artifact was then manually added to DVC tracking as `models/resnet18_baseline_v1.pth` and pushed to the remote. *(Status: Completed)*
+*   **Model Saving & Versioning:** Best model checkpoint (based on validation accuracy) saved automatically by `train.py` to the Hydra output directory. This artifact was then manually added to DVC tracking as `models/resnet18_baseline_v1.pth` (metafile `models/resnet18_baseline_v1.pth.dvc`) and pushed to the remote. *(Status: Completed)*
 
 ## 6. Documentation & Reporting
 
 ### **6.1 Project README**
 
-*   **Status:** *[Status: Updated]* Main `README.md` updated with setup, usage, architecture diagram, contribution summary, and tool list based on Phase 1 progress.
+*   **Status:** *[Status: Updated]* Main `README.md` updated with setup, usage, architecture diagram, contribution summary, tool list, and Phase 1 status.
 
 ### **6.2 Code Documentation**
 
-*   **Docstrings:** *[Status: In Progress]* Present in key functions, review pending.
-*   **Inline Comments:** *[Status: In Progress]* Added for some parts, review pending.
-*   **Code Styling & Formatting (`ruff`):** *[Status: Completed]* Code formatted using `ruff format`. `lint` command available in Makefile.
-*   **Type Checking (`mypy`):** *[Status: Not Implemented]* Type hints added, but `mypy` checks not yet integrated.
+*   **Docstrings:** *[Status: Completed]* Added to key functions in `dataset.py` and `train.py`.
+*   **Inline Comments:** *[Status: Completed]* Added for clarity in scripts.
+*   **Code Styling & Formatting (`ruff`):** *[Status: Completed]* Code formatted using `ruff format`. `make lint` and `make format` commands available in Makefile.
+*   **Type Checking (`mypy`):** *[Status: Not Implemented]* Type hints added, but `mypy` checks not yet integrated into CI/workflow.
 *   **Makefile Documentation:** *[Status: Completed]* Targets have `## Help text` comments.
-*   **Testing:** *[Status: Placeholder]* Basic test file `tests/test_data.py` exists with a placeholder test. `pytest` installed. Running `make test` currently fails. *(Action Item: Implement actual unit tests)*.
+*   **Testing:** *[Status: Completed]* Unit tests implemented in `tests/test_data.py` covering data extraction and transformation logic using `pytest` and `unittest.mock`. Tests can be run via `make test`.
 
 ---
 
@@ -129,5 +129,7 @@
 *   [X] WandB collaboration set up and run logged to shared entity.
 *   [X] Code formatting applied (`ruff format`).
 *   [X] Documentation (`README.md`, `PHASE1.md`) updated with results and status.
-*   [ ] Implement and pass at least one basic unit test. *(Remaining Action Item)*
-*   [ ] Final review of code documentation (docstrings, comments). *(Remaining ActionItem)*
+*   [X] Implement and pass basic unit tests.
+*   [X] Review of code documentation (docstrings, comments).
+
+---

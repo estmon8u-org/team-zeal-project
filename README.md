@@ -75,15 +75,16 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     2.  Set up version control for data (DVC) and code (Git). *(Completed)*
     3.  Integrate configuration management (Hydra) and experiment tracking (WandB). *(Completed)*
     4.  Structure the codebase for future drift simulation and detection implementation. *(Completed)*
+    5.  Implement basic unit tests for data handling. *(Completed)*
 
 ## 3. Project Architecture Diagram (Phase 1)
 ![Phase 1 Architecture Diagram](./phase1.jpg)
-*(This diagram represents the components set up in Phase 1: Data acquisition/versioning with DVC/G-Drive, Code versioning with Git/GitHub, Training pipeline using PyTorch/timm, Configuration via Hydra, Experiment Tracking via WandB, and local execution via Make.)*
+*(This diagram represents the components set up in Phase 1: Data acquisition/versioning with DVC/G-Drive, Code versioning with Git/GitHub, Training pipeline using PyTorch/timm, Configuration via Hydra, Experiment Tracking via WandB, Unit Testing via Pytest, and local execution via Make.)*
 
 ## 4. Phase Deliverables
 -   [X] [PHASE1.md](./PHASE1.md): Project Design & Model Development *(Completed)*
--   [ ] [PHASE2.md](./PHASE2.md): Enhancing ML Operations *(Upcoming)*
--   [ ] [PHASE3.md](./PHASE3.md): Continuous ML & Deployment *(Upcoming)*
+-   [ ] PHASE2.md: Enhancing ML Operations *(Upcoming)*
+-   [ ] PHASE3.md: Continuous ML & Deployment *(Upcoming)*
 
 ## 5. Setup Instructions
 
@@ -108,28 +109,34 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     ```bash
     # Ensure pip is up-to-date
     python -m pip install --upgrade pip
-    # Install project core and development dependencies from pyproject.toml
-    pip install -e .[dev]
+    
+    # Option 1: Using pip directly
+    pip install -e . # Use pyproject.toml for install
+    
+    # Option 2: Using make command
+    make requirements # This also uses pip install -e . behind the scenes
+    
+    # Optional: Install dev dependencies if needed separately (ruff, pytest etc. included above via pyproject)
+    # pip install -r requirements.txt # Can also use this, but pyproject.toml is preferred
     ```
 4.  **Accept WandB Team Invitation & Login (First Time Only):**
     *   Ensure you have accepted the invitation to join the **`emontel1-depaul-university`** team/entity on WandB (check your email or WandB notifications). You'll need a free WandB account associated with the invited email address.
     *   Run `wandb login` in your terminal and follow the prompts to authenticate your WandB account if you haven't used WandB on this machine before. This ensures your runs log to the shared team project.
 
 5.  **Set Up DVC Remote (Google Drive - First Time Only):**
-    *   **Permissions:** Ensure the Google Drive folder (ID: `19qyjvhry7pP9AF4q03hbKl4M5EWhrtk2`, specified in `.dvc/config`) has been shared with your `@depaul.edu/@gmail.com` Google account with **Editor** permissions by the project lead.
-    *   **Authenticate DVC:** The first time you run a command like `dvc pull`, you will be prompted to authenticate DVC with Google Drive via your browser. Follow the instructions, making sure to log in with your **`@depaul.edu/@gmail.com`** Google account and grant permissions.
+    *   **Permissions:** Ensure the Google Drive folder (ID: `19qyjvhry7pP9AF4q03hbKl4M5EWhrtk2`, specified in `.dvc/config`) has been shared with your `@depaul.edu` / `@gmail.com` Google account with **Editor** permissions by the project lead.
+    *   **Authenticate DVC:** The first time you run a command like `dvc pull`, you will be prompted to authenticate DVC with Google Drive via your browser. Follow the instructions, making sure to log in with your appropriate Google account and grant permissions.
         ```bash
         # Example command to trigger authentication if needed:
         dvc pull data/raw/imagenette2-160.tgz.dvc
         ```
-6.  **Pull Raw Data & Baseline Model:**
+6.  **Pull DVC Tracked Files (Raw Data & Baseline Model):**
     ```bash
-    # Pull the raw dataset archive tracked by DVC using the authenticated remote
-    dvc pull data/raw/imagenette2-160.tgz.dvc
-    # Pull the baseline model checkpoint
-    dvc pull models/resnet18_baseline_v1.pth.dvc
-    # Or pull everything tracked by DVC
-    # dvc pull
+    # Pull all files tracked by DVC using the authenticated remote
+    dvc pull
+    # Or pull specific files:
+    # dvc pull data/raw/imagenette2-160.tgz.dvc
+    # dvc pull models/resnet18_baseline_v1.pth.dvc
     ```
 
 ## 6. Usage Instructions
@@ -157,20 +164,21 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
         ```bash
         python -m drift_detector_pipeline.modeling.train training.epochs=5 training.learning_rate=0.0005
         ```
-4.  **(Optional) Run Linting/Formatting:**
+4.  **Run Linting/Formatting:**
     ```bash
-    make lint  # Check formatting and linting
-    make format # Apply formatting and fix linting issues
+    make lint  # Check formatting and linting using Ruff
+    make format # Apply formatting and fix linting issues using Ruff
     ```
-5.  **(Optional) Run Tests:** [Incomplete]
+5.  **Run Tests:**
     ```bash
-    make test # Run unit tests located in the tests/ directory
+    make test # Executes unit tests defined in the tests/ directory using pytest
     ```
 
 ## 7. Contribution Summary (Phase 1)
--   **Esteban Montelongo:** DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram, model DVC tracking.
+-   **Esteban Montelongo:** DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram, model DVC tracking, unit test implementation.
 -   **Sajith Bandara:** Hydra integration (`conf/config.yaml`, `train.py` decorator/config usage), `train.py` core structure (model loading, optimizer, scheduler, loop), Makefile setup (`train`, `process_data` rules), model saving path correction.
--   **Arjun Kumar Sankar Chandrasekar:** WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting, setup testing infrastructure.
+-   **Arjun Kumar Sankar Chandrasekar:** WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting, testing infrastructure setup and test contributions.
+
 
 ## 8. References & Key Tools Used
 -   **Dataset:** [Imagenette-160 (v2)](https://github.com/fastai/imagenette)
@@ -183,3 +191,4 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
 -   **Version Control:** [Git](https://git-scm.com/) & [GitHub](https://github.com/)
 -   **Build/Task Runner:** [GNU Make](https://www.gnu.org/software/make/)
 -   **Python Environment:** `venv` + `pip`
+-   **Project Template:** [Cookiecutter Data Science](https://cookiecutter-data-science.drivendata.org/)
