@@ -1,5 +1,12 @@
-# Data
-/data/
+# Ignore the contents of data subdirectories managed by DVC or processes
+/data/raw/*
+/data/interim/*
+/data/processed/*
+/data/external/*
+
+# Do not ignore any .dvc in the data subdirectories
+!/data/**/*.dvc
+
 
 # Mac OS-specific storage files
 .DS_Store
