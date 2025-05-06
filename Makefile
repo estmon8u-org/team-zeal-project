@@ -10,71 +10,99 @@ PYTHON_INTERPRETER = python
 # COMMANDS                                                                      #
 #################################################################################
 
-
-## Install Python dependencies
+## Install Python dependencies into the active virtual environment
+# Ensures pyproject.toml is used for editable install.
 .PHONY: requirements
 requirements:
-	pip install -e .
-	
+	@echo "Installing dependencies from pyproject.toml..."
+	$(PYTHON_INTERPRETER) -m pip install -e .
+	@echo "Dependencies installed."
+
+## Pull DVC tracked data
+# Assumes DVC is configured and remote is accessible.
+.PHONY: dvc_pull
+dvc_pull:
+	@echo "Pulling DVC tracked data..."
+	$(PYTHON_INTERPRETER) -m dvc pull
+	@echo "DVC pull complete."
 
 
-
-## Delete all compiled Python files
+## Delete Python cache files and other generated artifacts (cross-platform)
 .PHONY: clean
 clean:
-ifeq ($(OS),Windows_NT)
-	@echo "Cleaning Python cache files on Windows..."
-	powershell -Command "Get-ChildItem -Path . -Recurse -Filter *.pyc | Remove-Item -Force"
-	powershell -Command "Get-ChildItem -Path . -Recurse -Filter *.pyo | Remove-Item -Force"
-	powershell -Command "Get-ChildItem -Path . -Recurse -Filter __pycache__ -Directory | Remove-Item -Recurse -Force"
-else
-	find . -type f -name "*.py[co]" -delete
-	find . -type d -name "__pycache__" -delete
-endif
+	@echo "Cleaning Python cache files and generated artifacts using scripts/clean.py..."
+	$(PYTHON_INTERPRETER) scripts/clean.py
+	@echo "Cleaning complete."
 
 
-## Lint using ruff (use `make format` to do formatting)
+## Lint code using Ruff (checks formatting and style)
 .PHONY: lint
 lint:
-	ruff format --check
-	ruff check
+	@echo "Running Ruff linter and formatter check..."
+	$(PYTHON_INTERPRETER) -m ruff format --check .
+	$(PYTHON_INTERPRETER) -m ruff check .
+	@echo "Linting check complete."
 
-## Format source code with ruff
+## Format source code using Ruff
 .PHONY: format
 format:
-	ruff check --fix
-	ruff format
+	@echo "Formatting code with Ruff..."
+	$(PYTHON_INTERPRETER) -m ruff format .
+	$(PYTHON_INTERPRETER) -m ruff check --fix .
+	@echo "Formatting complete."
 
 
-
-## Run tests
+## Run tests using Pytest
 .PHONY: test
 test:
-	python -m pytest tests
+	@echo "Running tests..."
+	$(PYTHON_INTERPRETER) -m pytest tests
+	@echo "Tests finished."
 
-## Train run
+## Run the model training script
+# Ensure data is processed before training.
 .PHONY: train
-train:
-	python -m drift_detector_pipeline.modeling.train
+train: process_data
+	@echo "Starting model training..."
+	$(PYTHON_INTERPRETER) -m drift_detector_pipeline.modeling.train
+	@echo "Training finished."
 
-## Set up Python interpreter environment
+## Create a Python virtual environment
+# This command guides the user. Actual activation is manual.
 .PHONY: create_environment
 create_environment:
-	@bash -c "if [ ! -z `which virtualenvwrapper.sh` ]; then source `which virtualenvwrapper.sh`; mkvirtualenv $(PROJECT_NAME) --python=$(PYTHON_INTERPRETER); else mkvirtualenv.bat $(PROJECT_NAME) --python=$(PYTHON_INTERPRETER); fi"
-	@echo ">>> New virtualenv created. Activate with:\nworkon $(PROJECT_NAME)"
-	
-
+	@echo "Creating Python virtual environment in $(VENV_DIR)..."
+	$(PYTHON_INTERPRETER) -m venv $(VENV_DIR)
+	@echo "Virtual environment created in $(VENV_DIR)."
+	@echo "To activate it:"
+ifeq ($(OS),Windows_NT)
+	@echo "  On Windows (cmd): $(VENV_DIR)\\Scripts\\activate.bat"
+	@echo "  On Windows (PowerShell): .\\$(VENV_DIR)\\Scripts\\Activate.ps1"
+else
+	@echo "  On Linux/macOS: source $(VENV_DIR)/bin/activate"
+endif
+	@echo "Then run 'make requirements' to install dependencies."
 
 
 #################################################################################
 # PROJECT RULES                                                                 #
 #################################################################################
 
-# Example Makefile entry - Ensure paths match your script location
-process_data: data/processed/imagenette2-160 # Define target dir
-data/processed/imagenette2-160: data/raw/imagenette2-160.tgz
-	@echo "Processing raw data..."
-	python drift_detector_pipeline/dataset.py
+# Process raw data: ensures raw data is present (via DVC) and then extracts/processes it.
+# The target 'data/processed/imagenette2-160' is a directory.
+# The Python script itself handles idempotency (not re-extracting if already done).
+.PHONY: process_data  # Marking as .PHONY as its state isn't well-tracked by a single file
+process_data: dvc_pull data/raw/imagenette2-160.tgz
+	@echo "Processing raw data (extracting imagenette2-160.tgz)..."
+	$(PYTHON_INTERPRETER) -m drift_detector_pipeline.dataset
+	@echo "Data processing complete."
+
+# Prerequisite for data processing: the raw tarball.
+# This rule doesn't do anything itself but declares the dependency.
+# The actual fetching of this file is handled by 'make dvc_pull'.
+data/raw/imagenette2-160.tgz:
+	@echo "Raw data file data/raw/imagenette2-160.tgz is expected."
+	@echo "Run 'make dvc_pull' to ensure it is downloaded via DVC."
 
 
 #################################################################################
