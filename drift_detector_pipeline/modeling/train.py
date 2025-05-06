@@ -329,7 +329,7 @@ def train_model(cfg: DictConfig) -> float:
                 torch.save(model.state_dict(), model_save_path)
                 abs_save_path = os.path.abspath(model_save_path)  # Path within Hydra's run dir
                 log.info(
-                    f"✅ New best model saved at Epoch {epoch + 1} with accuracy {best_val_accuracy:.2f}% to {abs_save_path}"
+                    f"[SUCCESS] New best model saved at Epoch {epoch + 1} with accuracy {best_val_accuracy:.2f}% to {abs_save_path}"
                 )
             except Exception as e:
                 log.error(f"Error saving best model checkpoint: {e}")
@@ -343,11 +343,11 @@ def train_model(cfg: DictConfig) -> float:
 
     # --- End of Training ---
     total_training_duration = time.time() - script_start_time
-    log.info(f"🏁 Training finished after {cfg.training.epochs} epochs.")
+    log.info(f"[DONE] Training finished after {cfg.training.epochs} epochs.")
     log.info(
-        f"🏆 Best Validation Accuracy: {best_val_accuracy:.2f}% (achieved at epoch {best_epoch})"
+        f"[BEST] Best Validation Accuracy: {best_val_accuracy:.2f}% (achieved at epoch {best_epoch})"
     )
-    log.info(f"⏱️ Total Training Script Time: {total_training_duration:.2f} seconds")
+    log.info(f"[TIME] Total Training Script Time: {total_training_duration:.2f} seconds")
 
     # Save the final model state (regardless of performance)
     try:
