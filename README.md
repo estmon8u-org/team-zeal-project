@@ -201,13 +201,14 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     ```bash
     source .venv/bin/activate # Or Windows equivalent
     ```
-2.  **Process Raw Data (Extract Archive):**
-    -   Ensure the raw dataset `data/raw/imagenette2-160.tgz` is present (either by following Step 5.3 above or, if you have access to a DVC remote where it's already pushed, by running `dvc pull data/raw/imagenette2-160.tgz.dvc`).
-    -   Run the extraction using the Makefile:
+2.  **Process Raw Data (Download via DVC & Extract Archive):**
+    -   Ensure you have completed **Section 5: Setting Up DVC** if this is your first time or if you are setting up your own DVC remote. This includes configuring your remote and, if you are the first to set up this dataset on your remote, pushing the raw data to it (as per Step 5.3).
+    -   To download the DVC-tracked raw data (e.g., `imagenette2-160.tgz`) and then extract it, run:
         ```bash
         make process_data
         ```
-    -   This extracts `data/raw/imagenette2-160.tgz` into `data/processed/imagenette2-160/`.
+    -   This command will first attempt to run `make dvc_pull` (which executes `dvc pull` to download all DVC-tracked files from your configured remote, including `data/raw/imagenette2-160.tgz`).
+    -   Then, it will extract `data/raw/imagenette2-160.tgz` into `data/processed/imagenette2-160/`.
 
 3.  **Run Baseline Model Training:**
     *(Ensure WandB is set up if you want to log to your own WandB account - see `conf/config.yaml` to set your project/entity, and run `wandb login` once if needed).*
