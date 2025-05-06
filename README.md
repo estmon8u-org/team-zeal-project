@@ -110,34 +110,90 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     # Ensure pip is up-to-date
     python -m pip install --upgrade pip
     
-    # Option 1: Using pip directly
-    pip install -e . # Use pyproject.toml for install
-    
-    # Option 2: Using make command
-    make requirements # This also uses pip install -e . behind the scenes
-    
-    # Optional: Install dev dependencies if needed separately (ruff, pytest etc. included above via pyproject)
-    # pip install -r requirements.txt # Can also use this, but pyproject.toml is preferred
+    # Install project dependencies (includes DVC, PyTorch, etc.)
+    pip install -e . 
     ```
-4.  **Accept WandB Team Invitation & Login (First Time Only):**
-    *   Ensure you have accepted the invitation to join the **`emontel1-depaul-university`** team/entity on WandB (check your email or WandB notifications). You'll need a free WandB account associated with the invited email address.
-    *   Run `wandb login` in your terminal and follow the prompts to authenticate your WandB account if you haven't used WandB on this machine before. This ensures your runs log to the shared team project.
+4.  **Accept WandB Team Invitation & Login (First Time Only - For Original Team):**
+    *   If you are part of the original project team and want to log to the shared WandB space: Ensure you have accepted the invitation to join the **`emontel1-depaul-university`** team/entity on WandB.
+    *   Run `wandb login` in your terminal and follow the prompts to authenticate.
+    *   *For general users setting up their own instance, you will configure your own WandB project/entity later if desired (see `conf/config.yaml`).*
 
-5.  **Set Up DVC Remote (Google Drive - First Time Only):**
-    *   **Permissions:** Ensure the Google Drive folder (ID: `19qyjvhry7pP9AF4q03hbKl4M5EWhrtk2`, specified in `.dvc/config`) has been shared with your `@depaul.edu` / `@gmail.com` Google account with **Editor** permissions by the project lead.
-    *   **Authenticate DVC:** The first time you run a command like `dvc pull`, you will be prompted to authenticate DVC with Google Drive via your browser. Follow the instructions, making sure to log in with your appropriate Google account and grant permissions.
-        ```bash
-        # Example command to trigger authentication if needed:
-        dvc pull data/raw/imagenette2-160.tgz.dvc
-        ```
-6.  **Pull DVC Tracked Files (Raw Data & Baseline Model):**
+5.  **Setting Up DVC (Data Version Control) with Your Own Remote Storage:**
+
+    This project uses DVC to manage large data files and models. The Git repository contains `.dvc` metafiles that point to the actual data. If you want to replicate the project with your own data storage, follow these steps (using Google Drive as an example):
+
+*   **5.1. Initialize DVC (if starting a project from absolute scratch):**
+    Your cloned repository should already have a `.dvc` directory and configuration. If it didn't (e.g., you were starting a new project based on this one), you would run:
     ```bash
-    # Pull all files tracked by DVC using the authenticated remote
-    dvc pull
-    # Or pull specific files:
-    # dvc pull data/raw/imagenette2-160.tgz.dvc
-    # dvc pull models/resnet18_baseline_v1.pth.dvc
+    dvc init
     ```
+    This creates the `.dvc` directory and a basic configuration.
+
+*   **5.2. Configure Your DVC Remote (Example: Google Drive):**
+    1.  **Create a folder in your Google Drive** where you want to store the DVC-tracked files.
+    2.  **Get the Folder ID:** Open the folder in Google Drive. The ID is the last part of the URL (e.g., if the URL is `https://drive.google.com/drive/folders/ABCDEFG12345`, the ID is `ABCDEFG12345`).
+    3.  **Modify or Add DVC Remote Configuration:**
+        The existing `.dvc/config` file in this repository points to the original authors' Google Drive. You'll need to update it to point to *your* Google Drive folder, or add a new remote.
+
+        **Option A: Modify the existing 'gdrive' remote (Recommended for simplicity if you're the primary user of your fork):**
+        ```bash
+        dvc remote modify gdrive url gdrive://YOUR_GOOGLE_DRIVE_FOLDER_ID
+        ```
+        Replace `YOUR_GOOGLE_DRIVE_FOLDER_ID` with the ID you obtained.
+
+        **Option B: Add a new remote (if you want to keep the original remote config for reference):**
+        ```bash
+        dvc remote add mygdrive gdrive://YOUR_GOOGLE_DRIVE_FOLDER_ID
+        dvc remote default mygdrive # Set your new remote as the default
+        ```
+
+    4.  **Set DVC Google Drive Credentials (Optional but Recommended for Automation/CI):**
+        By default, DVC will use `gdrive_use_default_credential true` which prompts for browser authentication. For more control or non-interactive environments, you might configure specific OAuth credentials.
+        ```bash
+        # Example: Use default browser authentication (usually sufficient for personal use)
+        dvc remote modify gdrive gdrive_use_default_credential true 
+        # If you added 'mygdrive', use:
+        # dvc remote modify mygdrive gdrive_use_default_credential true
+        ```
+        For advanced credential setup (e.g., service accounts or your own client ID/secret), refer to the [official DVC Google Drive documentation](https://dvc.org/doc/user-guide/data-management/remote-storage/google-drive).
+        *Security Note: Be careful with client secrets. Do not commit them directly to Git. Use `.dvc/config.local` (which is in `.dvc/.gitignore`) for sensitive remote configurations if needed.*
+
+    5.  **Authenticate DVC with Google Drive:**
+        The first time you run a DVC command that interacts with the remote (like `dvc push` or `dvc pull` in the next steps), you will likely be prompted to authenticate via your browser. Follow the instructions, making sure to log in with your Google account that has access to the folder you created.
+
+*   **5.3. Download and Version the Raw Dataset:**
+    1.  **Download the Dataset:** The Imagenette-160 (v2 split) dataset can be downloaded from the [FastAI GitHub repository](https://github.com/fastai/imagenette).
+        Direct link to `imagenette2-160.tgz`: [https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz](https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz)
+    2.  **Place the Dataset:** Create the directory `data/raw/` if it doesn't exist, and place the downloaded `imagenette2-160.tgz` file into it.
+        The path should be: `data/raw/imagenette2-160.tgz`
+    3.  **Track with DVC:** Tell DVC to track this file. This will create/overwrite `data/raw/imagenette2-160.tgz.dvc`.
+        ```bash
+        dvc add data/raw/imagenette2-160.tgz
+        ```
+    4.  **Commit the Metafile to Git:**
+        ```bash
+        git add data/raw/imagenette2-160.tgz.dvc .dvc/config 
+        git commit -m "feat: Track raw Imagenette dataset with DVC and update remote config"
+        ```
+    5.  **Push to Your DVC Remote:**
+        ```bash
+        dvc push
+        ```
+        This uploads the `imagenette2-160.tgz` (as managed by DVC) to your configured Google Drive folder.
+
+*   **5.4. Baseline Model (You will train your own):**
+    The `.dvc` file for the baseline model (`models/resnet18_baseline_v1.pth.dvc`) in this repository points to the original authors' DVC storage.
+    **You will train your own baseline model in the "Usage Instructions" (Step 3: Run Baseline Model Training).**
+    After training, your best model will be saved (e.g., in `outputs/YYYY-MM-DD/HH-MM-SS/best_model.pth`). You can then optionally track this model with DVC:
+    ```bash
+    # Example after training:
+    # dvc add outputs/YYYY-MM-DD/HH-MM-SS/best_model.pth -o models/my_resnet18_baseline_v1.pth
+    # git add models/my_resnet18_baseline_v1.pth.dvc
+    # git commit -m "model: Add my trained baseline model to DVC"
+    # dvc push
+    ```
+    For now, you don't need to pull any pre-existing DVC-tracked model. If you see a DVC file for a model, you can generally ignore it until you've trained your own.
+
 
 ## 6. Usage Instructions
 
@@ -146,21 +202,23 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     source .venv/bin/activate # Or Windows equivalent
     ```
 2.  **Process Raw Data (Extract Archive):**
-    -   Ensure raw data is pulled (Setup Step 6).
+    -   Ensure the raw dataset `data/raw/imagenette2-160.tgz` is present (either by following Step 5.3 above or, if you have access to a DVC remote where it's already pushed, by running `dvc pull data/raw/imagenette2-160.tgz.dvc`).
     -   Run the extraction using the Makefile:
         ```bash
         make process_data
         ```
     -   This extracts `data/raw/imagenette2-160.tgz` into `data/processed/imagenette2-160/`.
+
 3.  **Run Baseline Model Training:**
-    -   Ensure Weights & Biases is set up (run `wandb login` once if needed).
+    *(Ensure WandB is set up if you want to log to your own WandB account - see `conf/config.yaml` to set your project/entity, and run `wandb login` once if needed).*
     -   Execute the training using the Makefile (uses `conf/config.yaml` by default):
         ```bash
         make train
         ```
-    -   Monitor progress in the terminal and on your WandB project dashboard: [https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift](https://wandb.ai/emontel1-depaul-university/zeal-imagenette-drift)
-    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`) containing logs (`train.log`), Hydra configs (`.hydra/`), and the saved `best_model.pth`. The best model from the run is automatically versioned by DVC after manual addition (see step 5.2 in PHASE1.md).
-    -   **Override Config:** You can change parameters via the command line using Hydra syntax, e.g.:
+    -   Monitor progress in the terminal and on your WandB project dashboard (if configured).
+    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`) containing logs, Hydra configs, and the saved `best_model.pth`.
+
+    *   **Override Config (Example):**
         ```bash
         python -m drift_detector_pipeline.modeling.train training.epochs=5 training.learning_rate=0.0005
         ```
