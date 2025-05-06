@@ -41,7 +41,7 @@ requires-python = ">=3.10"
 [tool.ruff]
 line-length = 99
 src = ["drift_detector_pipeline"]
-include = ["pyproject.toml", "drift_detector_pipeline/**/*.py"]
+include = ["pyproject.toml", "drift_detector_pipeline/**/*.py", "tests/*.py"]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting
