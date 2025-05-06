@@ -217,7 +217,8 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
         make train
         ```
     -   Monitor progress in the terminal and on your WandB project dashboard (if configured).
-    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`) containing logs, Hydra configs, and the saved `best_model.pth`.
+    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`). Inside this directory, you will find logs (`train.log`), Hydra configurations (`.hydra/`), and the saved model checkpoints: `best_model.pth` (based on validation accuracy) and `final_model.pth` (from the last epoch).
+    -   *Note: If you wish to version your trained model with DVC, refer to the example in Section 5.4 on how to use `dvc add` to track a model from the `outputs/` directory, potentially placing it into the `models/` directory under a new name.*
 
     *   **Override Config (Example):**
         ```bash
