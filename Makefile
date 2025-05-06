@@ -22,8 +22,15 @@ requirements:
 ## Delete all compiled Python files
 .PHONY: clean
 clean:
+ifeq ($(OS),Windows_NT)
+	@echo "Cleaning Python cache files on Windows..."
+	powershell -Command "Get-ChildItem -Path . -Recurse -Filter *.pyc | Remove-Item -Force"
+	powershell -Command "Get-ChildItem -Path . -Recurse -Filter *.pyo | Remove-Item -Force"
+	powershell -Command "Get-ChildItem -Path . -Recurse -Filter __pycache__ -Directory | Remove-Item -Recurse -Force"
+else
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
+endif
 
 
 ## Lint using ruff (use `make format` to do formatting)
