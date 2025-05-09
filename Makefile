@@ -92,7 +92,7 @@ endif
 # The target 'data/processed/imagenette2-160' is a directory.
 # The Python script itself handles idempotency (not re-extracting if already done).
 .PHONY: process_data  # Marking as .PHONY as its state isn't well-tracked by a single file
-process_data: dvc_pull data/raw/imagenette2-160.tgz
+process_data:
 	@echo "Processing raw data (extracting imagenette2-160.tgz)..."
 	$(PYTHON_INTERPRETER) -m drift_detector_pipeline.dataset
 	@echo "Data processing complete."
