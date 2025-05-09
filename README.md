@@ -112,6 +112,9 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
     
     # Install project dependencies (includes DVC, PyTorch, etc.)
     pip install -e . 
+
+    # If you are using the Makefile
+    make requirements
     ```
 4.  **Accept WandB Team Invitation & Login (First Time Only - For Original Team):**
     *   If you are part of the original project team and want to log to the shared WandB space: Ensure you have accepted the invitation to join the **`emontel1-depaul-university`** team/entity on WandB.

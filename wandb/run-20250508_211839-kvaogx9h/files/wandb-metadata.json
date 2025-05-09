@@ -1,0 +1,29 @@
+{
+  "os": "Windows-11-10.0.26100-SP0",
+  "python": "CPython 3.13.3",
+  "startedAt": "2025-05-09T04:18:39.234613Z",
+  "program": "-m drift_detector_pipeline.modeling.train",
+  "git": {
+    "remote": "https://github.com/estmon8u/team-zeal-project.git",
+    "commit": "ea69dcaf26c287efc2616e65d93f3582516d25ce"
+  },
+  "email": "emontel1@depaul.edu",
+  "root": "C:\\Users\\alile\\OneDrive\\Documents\\steven\\team-zeal-project",
+  "host": "SOULITA",
+  "executable": "C:\\Users\\alile\\OneDrive\\Documents\\steven\\team-zeal-project\\.venv\\Scripts\\python.exe",
+  "cpu_count": 8,
+  "cpu_count_logical": 16,
+  "disk": {
+    "/": {
+      "total": "486938054656",
+      "used": "343971561472"
+    }
+  },
+  "memory": {
+    "total": "16541003776"
+  },
+  "cpu": {
+    "count": 8,
+    "countLogical": 16
+  }
+}
