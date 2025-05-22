@@ -194,3 +194,9 @@ cython_debug/
 
 # Adding a `.ignore` directory that I want to ignore
 .ignore
+
+# Wandb directories
+.wandb/
+
+# Hydra output
+outputs/
