@@ -14,6 +14,8 @@ develop-eggs/
 .idea/
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
 
 # Virtual environments
 .venv/
@@ -25,6 +27,10 @@ ENV/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.cache/
+coverage.*
+.tox/
+.nox/
 
 # Git directory
 .git/
@@ -32,12 +38,8 @@ ENV/
 .gitattributes
 
 # DVC managed data and cache
-data/raw/*
-data/processed/*
-data/interim/*
-data/external/*
-
-# DVC cache directory
+data/
+.dvc/
 .dvc/cache/
 
 # Output directories from local runs
@@ -45,7 +47,15 @@ outputs/
 multirun/
 
 # Model files
-models/*.pth
+models/
+*.h5
+*.ckpt
+*.pth
+*.pt
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+*.ipynb
 
 # Logs, profiling data, temp files
 *.log
@@ -59,3 +69,8 @@ models/*.pth
 # Other sensitive or large files
 client_secret.json
 .env
+
+# Build artifacts
+build/
+dist/
+*.wheel
