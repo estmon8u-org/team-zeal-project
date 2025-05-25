@@ -74,9 +74,11 @@ jobs:
       #########################################################################
       - name: Run tests in Docker
         run: |
+          FULL_IMAGE_NAME_WITH_TAG="${BASE_IMAGE_NAME}:${IMAGE_TAG}"
+          echo "Running container from image: $FULL_IMAGE_NAME_WITH_TAG"
           docker run --rm \
             -v "$PWD:/app" \
-            $IMAGE_NAME:ci \
+            $FULL_IMAGE_NAME_WITH_TAG \
             make test
 
       #########################################################################
