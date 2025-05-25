@@ -192,5 +192,5 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Adding a `.ignore` directory that I want to ignore
-.ignore
+# Adding a `.secrets` directory that I want to ignore
+.secrets

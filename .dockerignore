@@ -67,6 +67,7 @@ models/
 *.swo
 
 # Other sensitive or large files
+.secrets/
 client_secret.json
 .env
 
