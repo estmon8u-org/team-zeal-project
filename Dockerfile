@@ -25,19 +25,17 @@ WORKDIR /app
 # Copy the requirements file to the container.
 COPY pyproject.toml README.md LICENSE Makefile ./
 
-# Install system dependencies.
-RUN pip install .
-
-# Stage 2: Application Code
-
 # Copy the rest of the application source code into the container
 COPY drift_detector_pipeline/ ./drift_detector_pipeline/
 COPY conf/ ./conf/
 COPY scripts/ ./scripts/
 COPY tests/ ./tests/
 
+# Install system dependencies.
+RUN pip install .
+
 # Add labels for metadata (Optional but good practice)
 LABEL maintainer="Team Zeal <EMONTEL1@depaul.edu, SBANDARA@depaul.edu, ASANKARC@depaul.edu>"
 LABEL project="team-zeal-project"
 LABEL description="MLOps pipeline for image classification with drift detection. Includes tools for data versioning, training, and experiment tracking."
-LABEL version="2.0.0"
+LABEL version="1.0.0"
