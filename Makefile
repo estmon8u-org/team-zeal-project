@@ -21,6 +21,7 @@
 PROJECT_NAME       := team-zeal-project
 PYTHON_VERSION     := 3.10
 PYTHON_INTERPRETER := python
+CI_MODE ?= false
 
 # ----------------------------------------------------------------------------- #
 # Docker image
@@ -89,11 +90,24 @@ endif
 
 .PHONY: check_service_account_key
 check_service_account_key:
-	@echo "Checking service‑account key: $(HOST_SERVICE_ACCOUNT_KEY_PATH)"
-ifeq ($(OS),Windows_NT)
-	@if not exist "$(subst /,\,$(HOST_SERVICE_ACCOUNT_KEY_PATH))" (echo "ERROR: key not found" && exit /b 1)
+ifeq ($(CI_MODE),true)
+	@echo "CI Mode: Skipping physical service account key file check. Assuming GDRIVE_CREDENTIALS_DATA is set by entrypoint."
 else
-	@[ -f "$(HOST_SERVICE_ACCOUNT_KEY_PATH)" ] || (echo "ERROR: key not found" && exit 1)
+	@echo "Local Mode: Checking for host service-account key at $(HOST_SERVICE_ACCOUNT_KEY_PATH)..."
+ifeq ($(OS),Windows_NT)
+	@if not exist "$(subst /,\,$(HOST_SERVICE_ACCOUNT_KEY_PATH))" ( \
+		echo "ERROR: Service account key NOT FOUND at $(HOST_SERVICE_ACCOUNT_KEY_PATH)!" >&2 && \
+		echo "Ensure the key file exists or HOST_SERVICE_ACCOUNT_KEY_PATH is set correctly." >&2 && \
+		exit /b 1 \
+	)
+else
+	@if [ ! -f "$(HOST_SERVICE_ACCOUNT_KEY_PATH)" ]; then \
+		echo "ERROR: Service account key NOT FOUND at $(HOST_SERVICE_ACCOUNT_KEY_PATH)!" >&2; \
+		echo "Ensure the key file exists or HOST_SERVICE_ACCOUNT_KEY_PATH is set correctly." >&2; \
+		exit 1; \
+	fi
+endif
+	@echo "Host service-account key found."
 endif
 
 # ----------------------------------------------------------------------------- #
@@ -141,6 +155,14 @@ docker_test: ensure_host_dvc_cache check_service_account_key docker_build
 ## Pull dataset with DVC on host
 .PHONY: dvc_pull
 dvc_pull: ensure_host_dvc_cache check_service_account_key
+	@echo "Pulling DVC tracked data (python -m dvc pull)..."
+ifeq ($(CI_MODE),true)
+	@echo "CI Mode: Using DVC with GDRIVE_CREDENTIALS_DATA (set by entrypoint)."
+else
+# For host `dvc pull`, it needs to know about the service account.
+# User should set GDRIVE_CREDENTIALS_DATA in host shell or have DVC configured for the key file.
+	@echo "Host Mode: Ensure DVC is configured for GDrive auth (e.g., GDRIVE_CREDENTIALS_DATA set in shell)."
+endif
 	$(PYTHON_INTERPRETER) -m dvc pull data/raw/imagenette2-160.tgz.dvc -r gdrive
 
 ## Install Python dependencies

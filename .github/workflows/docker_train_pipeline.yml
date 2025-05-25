@@ -60,6 +60,7 @@ jobs:
             -v "$PWD:/app" \
             -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
             -e WANDB_API_KEY="$WANDB_API_KEY" \
+            -e CI_MODE=true \ 
             $IMAGE_NAME:ci \
             make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu"
       
