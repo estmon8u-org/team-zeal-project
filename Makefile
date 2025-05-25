@@ -148,7 +148,7 @@ docker_dvc_pull: ensure_host_dvc_cache check_service_account_key docker_build
 docker_train: ensure_host_dvc_cache check_service_account_key docker_build
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(USER_ARGS) \
-		$(DOCKER_MEMORY_OPTS) $(IMAGE_NAME):$(IMAGE_TAG) make train HYDRA_ARGS="$(HYDRA_ARGS)"
+		$(DOCKER_MEMORY_OPTS) $(IMAGE_NAME):$(IMAGE_TAG) make train HYDRA_ARGS="$(DEFAULT_HYDRA_ARGS) $(HYDRA_ARGS)"
 
 ## Run tests inside Docker container
 .PHONY: docker_test
@@ -172,7 +172,7 @@ else
 # User should set GDRIVE_CREDENTIALS_DATA in host shell or have DVC configured for the key file.
 	@echo "Host Mode: Ensure DVC is configured for GDrive auth (e.g., GDRIVE_CREDENTIALS_DATA set in shell)."
 endif
-	$(PYTHON_INTERPRETER) -m dvc pull data/raw/imagenette2-160.tgz.dvc -r gdrive
+	$(PYTHON_INTERPRETER) -m dvc pull $(DVC_PARALLEL_JOBS) data/raw/imagenette2-160.tgz.dvc -r gdrive
 
 ## Install Python dependencies
 .PHONY: requirements
