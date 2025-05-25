@@ -27,9 +27,18 @@ CI_MODE ?= false
 # Docker image
 # ----------------------------------------------------------------------------- #
 
-IMAGE_NAME ?= $(PROJECT_NAME)
-IMAGE_TAG  ?= 1.0.0
-DOCKER_SHM_SIZE := --shm-size=10g
+ifeq ($(CI_MODE),true)
+    # Container must fit into ~3.7 GiB host RAM
+    DOCKER_MEMORY_OPTS := --memory=3500m --memory-swap=4g --shm-size=1g
+    # Lean training/pull defaults for CI
+    DEFAULT_HYDRA_ARGS := run.device=cpu data.dataloader_workers=1 training.batch_size=32
+    DVC_PARALLEL_JOBS  := -j 2          # dvc pull concurrency
+else
+    # Local / self-hosted runners
+    DOCKER_MEMORY_OPTS ?= --memory=8g --memory-swap=10g --shm-size=4g
+    DEFAULT_HYDRA_ARGS :=
+    DVC_PARALLEL_JOBS  :=
+endif
 
 # ----------------------------------------------------------------------------- #
 # DVC cache
@@ -125,28 +134,28 @@ docker_build:
 docker_shell: ensure_host_dvc_cache check_service_account_key
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(USER_ARGS) \
-		$(DOCKER_SHM_SIZE) $(IMAGE_NAME):$(IMAGE_TAG) bash
+		$(DOCKER_MEMORY_OPTS) $(IMAGE_NAME):$(IMAGE_TAG) bash
 
 ## Pull DVC data inside Docker container
 .PHONY: docker_dvc_pull
 docker_dvc_pull: ensure_host_dvc_cache check_service_account_key docker_build
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(USER_ARGS) \
-		$(DOCKER_SHM_SIZE) $(IMAGE_NAME):$(IMAGE_TAG) make dvc_pull
+		$(DOCKER_MEMORY_OPTS) $(IMAGE_NAME):$(IMAGE_TAG) make dvc_pull
 
 ## Train model inside Docker container
 .PHONY: docker_train
 docker_train: ensure_host_dvc_cache check_service_account_key docker_build
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(USER_ARGS) \
-		$(DOCKER_SHM_SIZE) $(IMAGE_NAME):$(IMAGE_TAG) make train HYDRA_ARGS="$(HYDRA_ARGS)"
+		$(DOCKER_MEMORY_OPTS) $(IMAGE_NAME):$(IMAGE_TAG) make train HYDRA_ARGS="$(HYDRA_ARGS)"
 
 ## Run tests inside Docker container
 .PHONY: docker_test
 docker_test: ensure_host_dvc_cache check_service_account_key docker_build
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(USER_ARGS) \
-		$(DOCKER_SHM_SIZE) $(IMAGE_NAME):$(IMAGE_TAG) make test
+		$(DOCKER_MEMORY_OPTS) $(IMAGE_NAME):$(IMAGE_TAG) make test
 
 # ----------------------------------------------------------------------------- #
 # Host‑side utilities
