@@ -88,150 +88,225 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
 
 ## 5. Setup Instructions
 
+This section guides you through setting up the project environment for both local host development and Docker-based execution.
+
 1.  **Clone Repository:**
     ```bash
-    git clone https://github.com/estmon8u/team-zeal-project.git # Or use SSH URL
+    git clone https://github.com/estmon8u/team-zeal-project.git # Or use your SSH URL
     cd team-zeal-project
     ```
-2.  **Create & Activate Virtual Environment:**
+
+2.  **Prerequisites:**
+    *   **Python:** Version 3.10 or higher (as defined in `pyproject.toml`).
+    *   **Make:** GNU Make.
+        *   Linux/macOS: Usually pre-installed or easily installable via package managers.
+        *   Windows: Requires installation (e.g., via [Chocolatey `choco install make`](https://chocolatey.org/packages/make), [GnuWin32](http://gnuwin32.sourceforge.net/packages/make.htm), or using the Make within WSL or Git Bash).
+    *   **Docker Desktop:** Required for building and running Docker containers. Download from the [official Docker website](https://www.docker.com/products/docker-desktop/). Ensure it's running.
+    *   **DVC:** Installed as part of Python dependencies (see step 4).
+
+3.  **Create & Activate Virtual Environment (Recommended for Host Development):**
     ```bash
-    # Create (only once)
-    python -m venv .venv
-    # Activate (each time you work on the project)
+    # Create (only once, using the project's configured Python interpreter)
+    make create_environment # Uses PYTHON_INTERPRETER defined in Makefile
+
+    # Activate (each time you work on the project locally)
     # Mac/Linux:
     source .venv/bin/activate
     # Windows Cmd:
     # .venv\Scripts\activate.bat
     # Windows PowerShell:
-    # .venv\Scripts\Activate.ps1
+    # .\.venv\Scripts\Activate.ps1
     ```
-3.  **Install Dependencies:**
+
+4.  **Install Python Dependencies (for Host Development):**
+    (Ensure your virtual environment is activated if you created one)
     ```bash
-    # Ensure pip is up-to-date
-    python -m pip install --upgrade pip
-    
-    # Install project dependencies (includes DVC, PyTorch, etc.)
-    pip install -e . 
+    make requirements
     ```
-4.  **Accept WandB Team Invitation & Login (First Time Only - For Original Team):**
-    *   If you are part of the original project team and want to log to the shared WandB space: Ensure you have accepted the invitation to join the **`emontel1-depaul-university`** team/entity on WandB.
-    *   Run `wandb login` in your terminal and follow the prompts to authenticate.
-    *   *For general users setting up their own instance, you will configure your own WandB project/entity later if desired (see `conf/config.yaml`).*
 
-5.  **Setting Up DVC (Data Version Control) with Your Own Remote Storage:**
+5.  **Set up Weights & Biases (WandB):**
+    *   **Create Account:** If you don't have one, sign up at [wandb.ai](https://wandb.ai).
+    *   **API Key for Local Development (Recommended):**
+        1.  Log in to WandB and go to your Authorize page (wandb.ai/authorize) to get your API key.
+        2.  Create a `.env` file in the project root (this file is in `.gitignore`):
+            ```env
+            # .env (Do NOT commit this file)
+            WANDB_API_KEY="YOUR_ACTUAL_WANDB_API_KEY_HERE"
+            ```
+        3.  The `Makefile` will automatically pick up this key if the `.env` file exists when running Dockerized commands. For host execution, `wandb` will find it or prompt if not found.
+    *   **Team Collaboration:** For team projects, ensure you are part of the correct WandB team/entity (specified in `conf/config.yaml` under `wandb.entity`).
 
-    This project uses DVC to manage large data files and models. The Git repository contains `.dvc` metafiles that point to the actual data. If you want to replicate the project with your own data storage, follow these steps (using Google Drive as an example):
+6.  **Set up DVC Google Drive Authentication (Service Account - CRITICAL for Docker/CI):**
 
-*   **5.1. Initialize DVC (if starting a project from absolute scratch):**
-    Your cloned repository should already have a `.dvc` directory and configuration. If it didn't (e.g., you were starting a new project based on this one), you would run:
-    ```bash
-    dvc init
-    ```
-    This creates the `.dvc` directory and a basic configuration.
+    This project uses DVC with Google Drive. For reliable, non-interactive authentication (especially within Docker and for CI/CD), a Google Cloud Service Account is used.
 
-*   **5.2. Configure Your DVC Remote (Example: Google Drive):**
-    1.  **Create a folder in your Google Drive** where you want to store the DVC-tracked files.
-    2.  **Get the Folder ID:** Open the folder in Google Drive. The ID is the last part of the URL (e.g., if the URL is `https://drive.google.com/drive/folders/ABCDEFG12345`, the ID is `ABCDEFG12345`).
-    3.  **Modify or Add DVC Remote Configuration:**
-        The existing `.dvc/config` file in this repository points to the original authors' Google Drive. You'll need to update it to point to *your* Google Drive folder, or add a new remote.
-
-        **Option A: Modify the existing 'gdrive' remote (Recommended for simplicity if you're the primary user of your fork):**
-        ```bash
-        dvc remote modify gdrive url gdrive://YOUR_GOOGLE_DRIVE_FOLDER_ID
-        ```
-        Replace `YOUR_GOOGLE_DRIVE_FOLDER_ID` with the ID you obtained.
-
-        **Option B: Add a new remote (if you want to keep the original remote config for reference):**
-        ```bash
-        dvc remote add mygdrive gdrive://YOUR_GOOGLE_DRIVE_FOLDER_ID
-        dvc remote default mygdrive # Set your new remote as the default
-        ```
-
-    4.  **Set DVC Google Drive Credentials (Optional but Recommended for Automation/CI):**
-        By default, DVC will use `gdrive_use_default_credential true` which prompts for browser authentication. For more control or non-interactive environments, you might configure specific OAuth credentials.
-        ```bash
-        # Example: Use default browser authentication (usually sufficient for personal use)
-        dvc remote modify gdrive gdrive_use_default_credential true 
-        # If you added 'mygdrive', use:
-        # dvc remote modify mygdrive gdrive_use_default_credential true
-        ```
-        For advanced credential setup (e.g., service accounts or your own client ID/secret), refer to the [official DVC Google Drive documentation](https://dvc.org/doc/user-guide/data-management/remote-storage/google-drive).
-        *Security Note: Be careful with client secrets. Do not commit them directly to Git. Use `.dvc/config.local` (which is in `.dvc/.gitignore`) for sensitive remote configurations if needed.*
-
-    5.  **Authenticate DVC with Google Drive:**
-        The first time you run a DVC command that interacts with the remote (like `dvc push` or `dvc pull` in the next steps), you will likely be prompted to authenticate via your browser. Follow the instructions, making sure to log in with your Google account that has access to the folder you created.
-
-*   **5.3. Download and Version the Raw Dataset:**
-    1.  **Download the Dataset:** The Imagenette-160 (v2 split) dataset can be downloaded from the [FastAI GitHub repository](https://github.com/fastai/imagenette).
-        Direct link to `imagenette2-160.tgz`: [https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz](https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz)
-    2.  **Place the Dataset:** Create the directory `data/raw/` if it doesn't exist, and place the downloaded `imagenette2-160.tgz` file into it.
-        The path should be: `data/raw/imagenette2-160.tgz`
-    3.  **Track with DVC:** Tell DVC to track this file. This will create/overwrite `data/raw/imagenette2-160.tgz.dvc`.
-        ```bash
-        dvc add data/raw/imagenette2-160.tgz
-        ```
-    4.  **Commit the Metafile to Git:**
-        ```bash
-        git add data/raw/imagenette2-160.tgz.dvc .dvc/config 
-        git commit -m "feat: Track raw Imagenette dataset with DVC and update remote config"
-        ```
-    5.  **Push to Your DVC Remote:**
-        ```bash
-        dvc push
-        ```
-        This uploads the `imagenette2-160.tgz` (as managed by DVC) to your configured Google Drive folder.
-
-*   **5.4. Baseline Model (You will train your own):**
-    The `.dvc` file for the baseline model (`models/resnet18_baseline_v1.pth.dvc`) in this repository points to the original authors' DVC storage.
-    **You will train your own baseline model in the "Usage Instructions" (Step 3: Run Baseline Model Training).**
-    After training, your best model will be saved (e.g., in `outputs/YYYY-MM-DD/HH-MM-SS/best_model.pth`). You can then optionally track this model with DVC:
-    ```bash
-    # Example after training:
-    # dvc add outputs/YYYY-MM-DD/HH-MM-SS/best_model.pth -o models/my_resnet18_baseline_v1.pth
-    # git add models/my_resnet18_baseline_v1.pth.dvc
-    # git commit -m "model: Add my trained baseline model to DVC"
-    # dvc push
-    ```
-    For now, you don't need to pull any pre-existing DVC-tracked model. If you see a DVC file for a model, you can generally ignore it until you've trained your own.
-
+    *   **6.1. Create Google Cloud Service Account & Key:**
+        1.  In the Google Cloud Platform (GCP) Console, navigate to "IAM & Admin" > "Service Accounts."
+        2.  Create a new service account (e.g., `dvc-gdrive-access-YOUR_INITIALS`).
+        3.  Download a JSON key for this service account.
+    *   **6.2. Store the Service Account Key Securely:**
+        1.  Create a directory named `.secrets` in the root of this project.
+        2.  Rename the downloaded JSON key to `gdrive-dvc-service-account.json` and place it inside this `.secrets` directory. The full path should be: `YOUR_PROJECT_ROOT/.secrets/gdrive-dvc-service-account.json`.
+        3.  **CRITICAL:** The `.secrets/` directory (and its contents) **MUST** be listed in your project's `.gitignore` file AND `.dockerignore` file to prevent the key from being committed to version control or included in Docker images. (Your current `.dockerignore` includes `.secrets/`).
+    *   **6.3. Share DVC Google Drive Folder:**
+        *   Go to the Google Drive folder used as your DVC remote (the ID is in `.dvc/config`, e.g., `gdrive://19qyjvhry7pP9AF4q03hbKl4M5EWhrtk2`).
+        *   Share this folder with the **service account's email address** (e.g., `your-sa@your-project.iam.gserviceaccount.com`), granting it **"Editor"** permissions.
+    *   **6.4. DVC Configuration (`.dvc/config.local`):**
+        *   Ensure the file `.dvc/config.local` (which should be in `.dvc/.gitignore`) exists and contains the following to instruct DVC to use the service account (the path is a fallback, as the entrypoint script handles the primary logic via environment variables):
+            ```ini
+            # .dvc/config.local
+            ['remote "gdrive"']
+                gdrive_use_service_account = true
+                # This path is a fallback/placeholder if GDRIVE_CREDENTIALS_DATA isn't set by the entrypoint.
+                # The entrypoint script will prioritize GDRIVE_CREDENTIALS_DATA.
+                gdrive_service_account_json_file_path = /tmp/dummy_gdrive_key.json
+            ```
+    *   **6.5. DVC Cache (Host Setup - Optional but Recommended for Performance):**
+        *   The `Makefile` attempts to mount a host DVC cache directory into Docker containers to speed up DVC operations. By default, it expects this at `~/.cache/dvc` (Linux/macOS) or `%USERPROFILE%/.cache/dvc` (Windows).
+        *   Run `make ensure_host_dvc_cache` once on your host to try and create this directory if it doesn't exist. DVC will also create it on its first use on the host.
 
 ## 6. Usage Instructions
 
-1.  **Activate Environment:**
-    ```bash
-    source .venv/bin/activate # Or Windows equivalent
-    ```
-2.  **Process Raw Data (Download via DVC & Extract Archive):**
-    -   Ensure you have completed **Section 5: Setting Up DVC** if this is your first time or if you are setting up your own DVC remote. This includes configuring your remote and, if you are the first to set up this dataset on your remote, pushing the raw data to it (as per Step 5.3).
-    -   To download the DVC-tracked raw data (e.g., `imagenette2-160.tgz`) and then extract it, run:
-        ```bash
-        make process_data
-        ```
-    -   This command will first attempt to run `make dvc_pull` (which executes `dvc pull` to download all DVC-tracked files from your configured remote, including `data/raw/imagenette2-160.tgz`).
-    -   Then, it will extract `data/raw/imagenette2-160.tgz` into `data/processed/imagenette2-160/`.
+All primary operations can be run via `make` commands from the project root directory.
 
-3.  **Run Baseline Model Training:**
-    *(Ensure WandB is set up if you want to log to your own WandB account - see `conf/config.yaml` to set your project/entity, and run `wandb login` once if needed).*
-    -   Execute the training using the Makefile (uses `conf/config.yaml` by default):
-        ```bash
-        make train
-        ```
-    -   Monitor progress in the terminal and on your WandB project dashboard (if configured).
-    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`) containing logs, Hydra configs, and the saved `best_model.pth`.
+### 6.1. Working Locally on Your Host Machine
 
-    *   **Override Config (Example):**
+(Ensure your virtual environment is activated: `source .venv/bin/activate` or Windows equivalent)
+
+*   **Pull DVC Data:**
+    *   Before first use, or to get updates if you are *not* using the Docker workflow for DVC operations, you need to authenticate DVC on your host to Google Drive. The recommended way for the host when using a service account is to set the `GDRIVE_CREDENTIALS_DATA` environment variable:
         ```bash
-        python -m drift_detector_pipeline.modeling.train training.epochs=5 training.learning_rate=0.0005
+        # Linux/macOS (run in your shell before 'make dvc_pull')
+        export GDRIVE_CREDENTIALS_DATA=$(cat .secrets/gdrive-dvc-service-account.json | tr -d '\n\r')
+
+        # Windows (PowerShell, run in your shell before 'make dvc_pull')
+        $env:GDRIVE_CREDENTIALS_DATA = Get-Content -Raw -Path ".\.secrets\gdrive-dvc-service-account.json"
         ```
-4.  **Run Linting/Formatting:**
+    *   Then, pull the specific raw data target:
+        ```bash
+        make dvc_pull
+        ```
+*   **Process Data (Extract, etc.):**
     ```bash
-    make lint  # Check formatting and linting using Ruff
-    make format # Apply formatting and fix linting issues using Ruff
+    make process_data
     ```
-5.  **Run Tests:**
+*   **Train Model:**
     ```bash
-    make test # Executes unit tests defined in the tests/ directory using pytest
+    # Basic training run
+    make train
+
+    # Override Hydra configuration parameters
+    make train HYDRA_ARGS="training.epochs=5 model.name=resnet34"
     ```
+*   **Run Tests:**
+    ```bash
+    make test
+    ```
+*   **Lint & Format Code:**
+    ```bash
+    make lint   # Check formatting and style
+    make format # Apply auto-formatting
+    ```
+*   **Clean Workspace:**
+    ```bash
+    make clean  # Removes __pycache__, .coverage, build artifacts, etc.
+    ```
+
+### 6.2. Working with Docker (Recommended for Reproducible Environments)
+
+The Docker setup uses an entrypoint script (`docker-entrypoint.sh`) that automatically configures DVC authentication inside the container using the service account key.
+
+*   **Build Docker Image:**
+    (Only needed once, or after changes to `Dockerfile`, project dependencies, or source code `COPY`ed into the image)
+    ```bash
+    make docker_build
+    # Or specify a tag: make docker_build IMAGE_TAG=custom-tag
+    ```
+*   **Run Interactive Shell in Docker:**
+    (Useful for debugging or running ad-hoc commands inside the containerized environment)
+    ```bash
+    make docker_shell
+    ```
+    Inside the shell, you are at `/app`. You can run `make` targets like `make lint`, `make test`, or DVC commands.
+*   **Pull DVC Data *Inside* Docker:**
+    (This uses the service account key mounted into the container)
+    ```bash
+    make docker_dvc_pull
+    ```
+*   **Process Data *Inside* Docker:**
+    (Assumes DVC data is pulled either on host and mounted, or via `make docker_dvc_pull`)
+    ```bash
+    # This will run 'make process_data' inside the container
+    docker run -it --rm \
+        $(DOCKER_VOLUMES) \
+        $(GDRIVE_ENV_ARGS) \
+        $(WANDB_ARGS) \
+        $(USER_ARGS) \
+        $(DOCKER_SHM_SIZE) \
+        $(IMAGE_NAME):$(IMAGE_TAG) make process_data
+    ```
+*   **Train Model *Inside* Docker:**
+    (This will run `make train` inside the container, which includes `make process_data` that in turn runs `make dvc_pull` inside the container)
+    ```bash
+    # Basic training run in Docker
+    make docker_train
+
+    # Override Hydra configuration
+    make docker_train HYDRA_ARGS="training.epochs=5 data.dataloader_workers=2"
+    ```
+    *   **How DVC Authentication Works in Docker:**
+        1.  The `Makefile` (when running `make docker_train`, etc.) mounts your local `.secrets/gdrive-dvc-service-account.json` to `/app/.secrets/gdrive-dvc-service-account.json` inside the container (read-only).
+        2.  It also sets the `GDRIVE_KEY_FILE_PATH_IN_CONTAINER` environment variable to this path.
+        3.  The `docker-entrypoint.sh` script reads the key from this path, validates it, and exports its content to the `GDRIVE_CREDENTIALS_DATA` environment variable.
+        4.  DVC commands (like `dvc pull` run via `make dvc_pull` inside the container's `make process_data` step) automatically use this `GDRIVE_CREDENTIALS_DATA` for non-interactive authentication to Google Drive.
+    *   **WandB in Docker:** If `WANDB_API_KEY` is set in your host environment (or `.env` file), it will be passed into the Docker container, allowing non-interactive WandB logging.
+*   **Run Tests *Inside* Docker:**
+    ```bash
+    make docker_test
+    ```
+
+### 6.3. Understanding Key Makefile Variables for Docker
+
+The `Makefile` uses several variables to configure Docker runs. You can often override these if needed (e.g., `make docker_train IMAGE_TAG=test ...`):
+
+*   `IMAGE_NAME`: Name of the Docker image (default: `team-zeal-project`).
+*   `IMAGE_TAG`: Tag for the Docker image (default: `1.0.0` - *update this in your Makefile as you version*).
+*   `HOST_DVC_CACHE_DIR`: Path on your host machine for the shared DVC cache (default: `~/.cache/dvc` or `%USERPROFILE%/.cache/dvc`). Mounted into the container to speed up DVC operations.
+*   `HOST_SERVICE_ACCOUNT_KEY_PATH`: Path on your host to the Google Drive DVC service account JSON key (default: `./.secrets/gdrive-dvc-service-account.json`).
+*   `HYDRA_ARGS`: Pass arguments to Hydra when running training (e.g., `make docker_train HYDRA_ARGS="training.epochs=1"`).
+*   `WANDB_API_KEY`: Set this in your host environment or `.env` file to enable WandB logging from Docker.
+
+## 7. For CI/CD Pipelines (e.g., GitHub Actions, GitLab CI)
+
+This setup is designed for CI/CD:
+
+1.  **Build & Push Docker Image:** Your CI pipeline should build the Docker image (`make docker_build`) and push it to a container registry.
+2.  **Run Jobs:** Subsequent CI jobs (e.g., for testing or training) will pull this image.
+3.  **Secrets Management:**
+    *   **DVC (Google Drive Service Account):**
+        1.  Store the *content* of your `gdrive-dvc-service-account.json` file as a CI/CD secret (e.g., GitHub Secret named `GDRIVE_SA_KEY_JSON_CONTENT`).
+        2.  In your CI pipeline script, when running the Docker container, pass this secret as the `GDRIVE_CREDENTIALS_DATA_CONTENT` environment variable:
+            ```bash
+            docker run --rm \
+              -v "$(pwd):/app" \ # Mount current checkout for code, outputs
+              -e GDRIVE_CREDENTIALS_DATA_CONTENT="${YOUR_CI_SECRET_HERE}" \
+              # Potentially mount a CI-specific DVC cache volume
+              # -v "/path/to/ci/dvc_cache:/root/.dvc/cache" \
+              your-image-name:tag \
+              make train # Or other targets
+            ```
+            The `docker-entrypoint.sh` script will detect `GDRIVE_CREDENTIALS_DATA_CONTENT` and configure DVC.
+    *   **WandB API Key:**
+        1.  Store your WandB API key as a CI/CD secret (e.g., `WANDB_API_KEY_SECRET`).
+        2.  Pass it to `docker run`:
+            ```bash
+            docker run --rm \
+              # ... other args ...
+              -e WANDB_API_KEY="${WANDB_API_KEY_SECRET}" \
+              your-image-name:tag \
+              make train
+            ```
+
 
 ## 7. Contribution Summary (Phase 1)
 -   **Esteban Montelongo:** DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram, model DVC tracking, unit test implementation.
