@@ -1,0 +1,61 @@
+# .dockerignore
+
+# Python specific
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+develop-eggs/
+.installed.cfg
+*.egg
+
+# IDE / OS specific
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Cache files from tools
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Git directory
+.git/
+.gitignore
+.gitattributes
+
+# DVC managed data and cache
+data/raw/*
+data/processed/*
+data/interim/*
+data/external/*
+
+# DVC cache directory
+.dvc/cache/
+
+# Output directories from local runs
+outputs/
+multirun/
+
+# Model files
+models/*.pth
+
+# Logs, profiling data, temp files
+*.log
+*.prof
+*.pstats
+*.sqlite3
+*.tmp
+*.swp
+*.swo
+
+# Other sensitive or large files
+client_secret.json
+.env
