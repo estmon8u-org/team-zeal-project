@@ -1,11 +1,11 @@
 # PHASE 2: Enhancing ML Operations with Containerization & Monitoring
 
 ## 1. Containerization
-- [ ] **1.1 Dockerfile**
-  - [ ] Dockerfile created and tested
-  - [ ] Instructions for building and running the container
-- [ ] **1.2 Environment Consistency**
-  - [ ] All dependencies included in the container
+- [x] **1.1 Dockerfile**
+  - [x] Dockerfile created and tested
+  - [x] Instructions for building and running the container
+- [x] **1.2 Environment Consistency**
+  - [x] All dependencies included in the container
 
 ## 2. Monitoring & Debugging
 
