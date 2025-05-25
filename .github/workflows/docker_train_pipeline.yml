@@ -26,7 +26,8 @@ jobs:
     timeout-minutes: 120           # Fail job if it exceeds 2 h
 
     env:                           # Job‑wide env vars (available to all steps)
-      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+      BASE_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+      IMAGE_TAG: ci
       SA_KEY: ${{ secrets.GDRIVE_SA_KEY_JSON_CONTENT }}
       WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
 
@@ -49,19 +50,23 @@ jobs:
       #########################################################################
       - name: Build Docker image
         run: |
-          docker build -t $IMAGE_NAME:ci .
+          FULL_IMAGE_NAME_WITH_TAG="${BASE_IMAGE_NAME}:${IMAGE_TAG}"
+          echo "Building image: $FULL_IMAGE_NAME_WITH_TAG"
+          docker build -t $FULL_IMAGE_NAME_WITH_TAG .
 
       #########################################################################
       # 4. Run training inside the image
       #########################################################################
       - name: Run DVC pull + training in Docker
         run: |
+          FULL_IMAGE_NAME_WITH_TAG="${BASE_IMAGE_NAME}:${IMAGE_TAG}"
+          echo "Running container from image: $FULL_IMAGE_NAME_WITH_TAG"
           docker run --rm \
             -v "$PWD:/app" \
             -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
             -e WANDB_API_KEY="$WANDB_API_KEY" \
-            -e CI_MODE=true \ 
-            $IMAGE_NAME:ci \
+            -e CI_MODE=true \
+            $FULL_IMAGE_NAME_WITH_TAG \
             make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu"
       
       #########################################################################
