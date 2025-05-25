@@ -194,3 +194,13 @@ cython_debug/
 
 # Adding a `.secrets` directory that I want to ignore
 .secrets
+
+# Wandb directory
+.wandb/
+wandb/
+
+# Output directories from local runs
+outputs/
+
+# Model files
+*.pth
