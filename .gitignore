@@ -204,3 +204,6 @@ outputs/
 
 # Model files
 *.pth
+
+# Pytorch Profiler output
+pytorch_profiler_logs
