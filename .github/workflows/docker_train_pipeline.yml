@@ -22,7 +22,9 @@ on:
 
 jobs:
   train:
-    runs-on: ubuntu-latest-m       # GitHub hosted Ubuntu runner
+    runs-on:
+      group: default          # the group you created
+      labels: ubuntu-latest-m        # 4-core / 16 GB medium runner
     timeout-minutes: 120           # Fail job if it exceeds 2 h
 
     env:                           # Job‑wide env vars (available to all steps)
