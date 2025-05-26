@@ -28,8 +28,7 @@ CI_MODE ?= false
 # ----------------------------------------------------------------------------- #
 
 ifeq ($(CI_MODE),true)
-    # Container must fit into ~3.7 GiB host RAM
-    DOCKER_MEMORY_OPTS := --memory=16g --memory-swap=10g --shm-size=4g
+    DOCKER_MEMORY_OPTS := --memory=32g --memory-swap=32g --shm-size=32g
     # Lean training/pull defaults for CI
     DEFAULT_HYDRA_ARGS := run.device=cpu data.dataloader_workers=1 training.batch_size=32
     DVC_PARALLEL_JOBS  := -j 2          # dvc pull concurrency
