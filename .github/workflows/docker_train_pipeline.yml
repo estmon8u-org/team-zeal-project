@@ -1,7 +1,7 @@
 ###############################################################################
 # Workflow  : Dockerized Training Pipeline (CI)
 # Triggered :
-#   • push        → main, develop, phase2-test
+#   • push        → main, develop
 #   • pull_request→ main, develop
 #   • manual run  → workflow_dispatch
 # Purpose   :
@@ -15,7 +15,7 @@ name: docker-train
 
 on:
   push:
-    branches: [main, develop, phase2-test]
+    branches: [main, develop]
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
