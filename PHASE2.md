@@ -25,9 +25,9 @@
   - [X] Instructions for visualizing and comparing runs
 
 ## 5. Application & Experiment Logging
-- [ ] **5.1 Logging Setup**
-  - [ ] logger and/or rich integrated
-  - [ ] Example log entries and their meaning
+- [X] **5.1 Logging Setup**
+  - [X] logger and/or rich integrated
+  - [X] Example log entries and their meaning
 
 ## 6. Configuration Management
 - [X] **6.1 Hydra or Similar**
