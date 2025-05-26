@@ -1,0 +1,77 @@
+# .dockerignore
+
+# Python specific
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+develop-eggs/
+.installed.cfg
+*.egg
+
+# IDE / OS specific
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Cache files from tools
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.cache/
+coverage.*
+.tox/
+.nox/
+
+# Git directory
+.git/
+.gitignore
+.gitattributes
+
+# DVC managed data and cache
+data/
+.dvc/
+.dvc/cache/
+
+# Output directories from local runs
+outputs/
+multirun/
+
+# Model files
+models/
+*.h5
+*.ckpt
+*.pth
+*.pt
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs, profiling data, temp files
+*.log
+*.prof
+*.pstats
+*.sqlite3
+*.tmp
+*.swp
+*.swo
+
+# Other sensitive or large files
+.secrets/
+client_secret.json
+.env
+
+# Build artifacts
+build/
+dist/
+*.wheel

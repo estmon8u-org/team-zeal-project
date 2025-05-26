@@ -4,57 +4,33 @@
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
-MLOps pipeline for image classification on Imagenette-160, featuring automated data drift detection and retraining.
+MLOps pipeline for image classification on Imagenette-160. This project utilizes Docker for containerization, DVC for data versioning with Google Drive (via Service Accounts), Hydra for configuration, Weights & Biases for experiment tracking, PyTorch Profiler for performance analysis, and GitHub Actions for CI/CD.
 
 ## Project Organization
 
 ```
-├── LICENSE            <- Open-source license if one is chosen
-├── Makefile           <- Makefile with convenience commands like `make data` or `make train`
-├── README.md          <- The top-level README for developers using this project.
-├── data
-│   ├── external       <- Data from third party sources.
-│   ├── interim        <- Intermediate data that has been transformed.
-│   ├── processed      <- The final, canonical data sets for modeling.
-│   └── raw            <- The original, immutable data dump.
-│
-├── docs               <- A default mkdocs project; see www.mkdocs.org for details
-│
-├── models             <- Trained and serialized models, model predictions, or model summaries
-│
-├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                         the creator's initials, and a short `-` delimited description, e.g.
-│                         `1.0-jqp-initial-data-exploration`.
-│
-├── pyproject.toml     <- Project configuration file with package metadata for 
-│                         drift_detector_pipeline and configuration for tools like black
-│
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-│
-├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-│   └── figures        <- Generated graphics and figures to be used in reporting
-│
-├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-│                         generated with `pip freeze > requirements.txt`
-│
-├── setup.cfg          <- Configuration file for flake8
-│
-└── drift_detector_pipeline   <- Source code for use in this project.
-    │
-    ├── __init__.py             <- Makes drift_detector_pipeline a Python module
-    │
-    ├── config.py               <- Store useful variables and configuration
-    │
-    ├── dataset.py              <- Scripts to download or generate data
-    │
-    ├── features.py             <- Code to create features for modeling
-    │
-    ├── modeling                
-    │   ├── __init__.py 
-    │   ├── predict.py          <- Code to run model inference with trained models          
-    │   └── train.py            <- Code to train models
-    │
-    └── plots.py                <- Code to create visualizations
+├── .dockerignore        <- Specifies files to exclude from Docker image
+├── .dvc/                <- DVC metadata and configuration
+├── .github/workflows/   <- GitHub Actions CI/CD workflows
+├── .gitignore           <- Specifies intentionally untracked files for Git
+├── .secrets/            <- (Gitignored) Directory for sensitive keys like service accounts
+├── LICENSE              <- Open-source license
+├── Makefile             <- Convenience commands for building, training, testing, etc.
+├── PHASE1.md            <- Documentation for Phase 1 deliverables
+├── PHASE2.md            <- Documentation for Phase 2 deliverables
+├── README.md            <- This file: project overview and instructions
+├── Dockerfile           <- Instructions to build the project's Docker image
+├── conf/                <- Hydra configuration files (e.g., config.yaml)
+├── data/                <- (DVC-managed, gitignored) Project data (raw, processed)
+├── docker-entrypoint.sh <- Script executed when Docker container starts
+├── docs/                <- Project documentation (e.g., for MkDocs)
+├── drift_detector_pipeline/ <- Python source code for the project
+├── models/              <- (DVC-managed or gitignored) Trained models
+├── notebooks/           <- Jupyter notebooks for exploration
+├── outputs/             <- (Gitignored) Hydra outputs, logs, saved models from runs
+├── pyproject.toml       <- Python project metadata and dependencies (PEP 517/518)
+├── requirements.txt     <- Pinned Python dependencies (for reference or specific envs)
+└── tests/               <- Unit and integration tests
 ```
 
 ---
@@ -68,191 +44,267 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
 -   **Course & Section:** SE 489: ML Engineering For Production (MLOps)
 
 ## 2. Project Overview
--   **Summary:** This project implements an end-to-end MLOps pipeline to train an image classification model (ResNet-18 using `timm`) on the Imagenette-160 dataset, monitor for data drift, and eventually automate retraining.
--   **Problem Statement:** Machine learning models deployed in production often suffer performance degradation over time due to changes in the underlying data distribution (data drift). This project aims to build a system that can automatically detect such drift in an image classification task and maintain model performance through automated retraining.
--   **Main Objectives (Phase 1 Focus):**
-    1.  Establish a reproducible baseline training pipeline for ResNet-18 on clean Imagenette-160 data, achieving ≥85% validation accuracy. *(Achieved: 96.76%)*
-    2.  Set up version control for data (DVC) and code (Git). *(Completed)*
-    3.  Integrate configuration management (Hydra) and experiment tracking (WandB). *(Completed)*
-    4.  Structure the codebase for future drift simulation and detection implementation. *(Completed)*
-    5.  Implement basic unit tests for data handling. *(Completed)*
+-   **Summary:** This project implements an end-to-end MLOps pipeline to train an image classification model (ResNet-18 using `timm`) on the Imagenette-160 dataset. It incorporates containerization with Docker, data versioning with DVC and Google Drive, experiment tracking with Weights & Biases, configuration management with Hydra, performance profiling with PyTorch Profiler, and CI/CD with GitHub Actions.
+-   **Problem Statement:** Machine learning models in production often suffer performance degradation due to data drift. This project aims to build robust, reproducible, and analyzable training pipelines as a foundation for systems that can automatically detect such drift and maintain model performance.
+-   **Key Objectives:**
+    -   **Phase 1:** Establish a reproducible baseline training pipeline, DVC, Hydra, WandB integration, and unit tests. *(Status: Completed)*
+    -   **Phase 2:** Enhance with Docker containerization, advanced logging, code profiling, and CI/CD. *(Status: Docker & Profiling implemented)*
 
 ## 3. Project Architecture Diagram (Phase 1)
 ![Phase 1 Architecture Diagram](./phase1.jpg)
 *(This diagram represents the components set up in Phase 1: Data acquisition/versioning with DVC/G-Drive, Code versioning with Git/GitHub, Training pipeline using PyTorch/timm, Configuration via Hydra, Experiment Tracking via WandB, Unit Testing via Pytest, and local execution via Make.)*
 
 ## 4. Phase Deliverables
--   [X] [PHASE1.md](./PHASE1.md): Project Design & Model Development *(Completed)*
--   [ ] PHASE2.md: Enhancing ML Operations *(Upcoming)*
+-   [X] [PHASE1.md](./PHASE1.md): Project Design & Model Development
+-   [X] [PHASE2.md](./PHASE2.md): Enhancing ML Operations with Containerization & Monitoring *(Docker & Profiling implemented)*
 -   [ ] PHASE3.md: Continuous ML & Deployment *(Upcoming)*
 
 ## 5. Setup Instructions
 
+This section guides you through setting up the project environment for both local host development and Docker-based execution.
+
 1.  **Clone Repository:**
     ```bash
-    git clone https://github.com/estmon8u/team-zeal-project.git # Or use SSH URL
+    git clone https://github.com/estmon8u/team-zeal-project.git # Or your SSH URL
     cd team-zeal-project
     ```
-2.  **Create & Activate Virtual Environment:**
+
+2.  **Prerequisites:**
+    *   **Python:** Version 3.10 or higher (as defined in `pyproject.toml`).
+    *   **Make:** GNU Make.
+        *   Linux/macOS: Usually pre-installed.
+        *   Windows: Requires installation (e.g., via Chocolatey `choco install make`, GnuWin32, or use Make within WSL/Git Bash).
+    *   **Docker Desktop:** Required for building and running Docker containers. Download from [docker.com](https://www.docker.com/products/docker-desktop/). Ensure it's running.
+    *   **Git:** For version control.
+
+3.  **Create & Activate Virtual Environment (Recommended for Host Development):**
     ```bash
-    # Create (only once)
-    python -m venv .venv
-    # Activate (each time you work on the project)
-    # Mac/Linux:
-    source .venv/bin/activate
-    # Windows Cmd:
-    # .venv\Scripts\activate.bat
-    # Windows PowerShell:
-    # .venv\Scripts\Activate.ps1
+    make create_environment # Uses PYTHON_INTERPRETER defined in Makefile
     ```
-3.  **Install Dependencies:**
+    Activate the environment:
+    *   Linux/macOS: `source .venv/bin/activate`
+    *   Windows CMD: `.venv\Scripts\activate.bat`
+    *   Windows PowerShell: `.\.venv\Scripts\Activate.ps1`
+
+4.  **Install Python Dependencies (for Host Development):**
+    (Ensure virtual environment is activated)
     ```bash
-    # Ensure pip is up-to-date
-    python -m pip install --upgrade pip
-    
-    # Install project dependencies (includes DVC, PyTorch, etc.)
-    pip install -e . 
-
-    # Using make (It does pip install -e . )
-    make requirements 
-
+    make requirements
     ```
-4.  **Accept WandB Team Invitation & Login (First Time Only - For Original Team):**
-    *   If you are part of the original project team and want to log to the shared WandB space: Ensure you have accepted the invitation to join the **`emontel1-depaul-university`** team/entity on WandB.
-    *   Run `wandb login` in your terminal and follow the prompts to authenticate.
-    *   *For general users setting up their own instance, you will configure your own WandB project/entity later if desired (see `conf/config.yaml`).*
 
-5.  **Setting Up DVC (Data Version Control) with Your Own Remote Storage:**
+5.  **Set up Weights & Biases (WandB):**
+    *   **Account:** Sign up at [wandb.ai](https://wandb.ai).
+    *   **API Key for Local Development:**
+        1.  Get your API key from `wandb.ai/authorize`.
+        2.  Create a `.env` file in the project root (it's gitignored):
+            ```env
+            # .env (Do NOT commit this file)
+            WANDB_API_KEY="YOUR_ACTUAL_WANDB_API_KEY_HERE"
+            ```
+        3.  The `Makefile` passes this key to Docker containers if the `.env` file is present (via `--env-file .env`). For host execution, `wandb` CLI will prompt or use a globally saved key.
+    *   **Team/Entity:** Configure in `conf/config.yaml` (`wandb.entity`).
 
-    This project uses DVC to manage large data files and models. The Git repository contains `.dvc` metafiles that point to the actual data. If you want to replicate the project with your own data storage, follow these steps (using Google Drive as an example):
+6.  **Set up DVC Google Drive Authentication (Service Account Method):**
+    A Google Cloud Service Account is used for non-interactive DVC authentication with Google Drive, crucial for Docker and CI/CD.
 
-*   **5.1. Initialize DVC (if starting a project from absolute scratch):**
-    Your cloned repository should already have a `.dvc` directory and configuration. If it didn't (e.g., you were starting a new project based on this one), you would run:
-    ```bash
-    dvc init
-    ```
-    This creates the `.dvc` directory and a basic configuration.
-
-*   **5.2. Configure Your DVC Remote (Example: Google Drive):**
-    1.  **Create a folder in your Google Drive** where you want to store the DVC-tracked files.
-    2.  **Get the Folder ID:** Open the folder in Google Drive. The ID is the last part of the URL (e.g., if the URL is `https://drive.google.com/drive/folders/ABCDEFG12345`, the ID is `ABCDEFG12345`).
-    3.  **Modify or Add DVC Remote Configuration:**
-        The existing `.dvc/config` file in this repository points to the original authors' Google Drive. You'll need to update it to point to *your* Google Drive folder, or add a new remote.
-
-        **Option A: Modify the existing 'gdrive' remote (Recommended for simplicity if you're the primary user of your fork):**
-        ```bash
-        dvc remote modify gdrive url gdrive://YOUR_GOOGLE_DRIVE_FOLDER_ID
-        ```
-        Replace `YOUR_GOOGLE_DRIVE_FOLDER_ID` with the ID you obtained.
-
-        **Option B: Add a new remote (if you want to keep the original remote config for reference):**
-        ```bash
-        dvc remote add mygdrive gdrive://YOUR_GOOGLE_DRIVE_FOLDER_ID
-        dvc remote default mygdrive # Set your new remote as the default
-        ```
-
-    4.  **Set DVC Google Drive Credentials (Optional but Recommended for Automation/CI):**
-        By default, DVC will use `gdrive_use_default_credential true` which prompts for browser authentication. For more control or non-interactive environments, you might configure specific OAuth credentials.
-        ```bash
-        # Example: Use default browser authentication (usually sufficient for personal use)
-        dvc remote modify gdrive gdrive_use_default_credential true 
-        # If you added 'mygdrive', use:
-        # dvc remote modify mygdrive gdrive_use_default_credential true
-        ```
-        For advanced credential setup (e.g., service accounts or your own client ID/secret), refer to the [official DVC Google Drive documentation](https://dvc.org/doc/user-guide/data-management/remote-storage/google-drive).
-        *Security Note: Be careful with client secrets. Do not commit them directly to Git. Use `.dvc/config.local` (which is in `.dvc/.gitignore`) for sensitive remote configurations if needed.*
-
-    5.  **Authenticate DVC with Google Drive:**
-        The first time you run a DVC command that interacts with the remote (like `dvc push` or `dvc pull` in the next steps), you will likely be prompted to authenticate via your browser. Follow the instructions, making sure to log in with your Google account that has access to the folder you created.
-
-*   **5.3. Download and Version the Raw Dataset:**
-    1.  **Download the Dataset:** The Imagenette-160 (v2 split) dataset can be downloaded from the [FastAI GitHub repository](https://github.com/fastai/imagenette).
-        Direct link to `imagenette2-160.tgz`: [https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz](https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz)
-    2.  **Place the Dataset:** Create the directory `data/raw/` if it doesn't exist, and place the downloaded `imagenette2-160.tgz` file into it.
-        The path should be: `data/raw/imagenette2-160.tgz`
-    3.  **Track with DVC:** Tell DVC to track this file. This will create/overwrite `data/raw/imagenette2-160.tgz.dvc`.
-        ```bash
-        dvc add data/raw/imagenette2-160.tgz
-        ```
-    4.  **Commit the Metafile to Git:**
-        ```bash
-        git add data/raw/imagenette2-160.tgz.dvc .dvc/config 
-        git commit -m "feat: Track raw Imagenette dataset with DVC and update remote config"
-        ```
-    5.  **Push to Your DVC Remote:**
-        ```bash
-        dvc push
-        ```
-        This uploads the `imagenette2-160.tgz` (as managed by DVC) to your configured Google Drive folder.
-
-*   **5.4. Baseline Model (You will train your own):**
-    The `.dvc` file for the baseline model (`models/resnet18_baseline_v1.pth.dvc`) in this repository points to the original authors' DVC storage.
-    **You will train your own baseline model in the "Usage Instructions" (Step 3: Run Baseline Model Training).**
-    After training, your best model will be saved (e.g., in `outputs/YYYY-MM-DD/HH-MM-SS/best_model.pth`). You can then optionally track this model with DVC:
-    ```bash
-    # Example after training:
-    # dvc add outputs/YYYY-MM-DD/HH-MM-SS/best_model.pth -o models/my_resnet18_baseline_v1.pth
-    # git add models/my_resnet18_baseline_v1.pth.dvc
-    # git commit -m "model: Add my trained baseline model to DVC"
-    # dvc push
-    ```
-    For now, you don't need to pull any pre-existing DVC-tracked model. If you see a DVC file for a model, you can generally ignore it until you've trained your own.
-
+    *   **6.1. Create Google Cloud Service Account & Key:**
+        1.  In the Google Cloud Platform (GCP) Console, navigate to "IAM & Admin" > "Service Accounts."
+        2.  Create a new service account (e.g., `dvc-gdrive-accessor-YOUR_INITIALS`).
+        3.  Download a JSON key for this service account.
+    *   **6.2. Store the Service Account Key Securely:**
+        1.  Create a directory named `.secrets` in the root of this project if it doesn't exist.
+        2.  Rename the downloaded JSON key to `gdrive-dvc-service-account.json` and place it inside this `.secrets` directory. The path should be: `YOUR_PROJECT_ROOT/.secrets/gdrive-dvc-service-account.json`.
+        3.  **CRITICAL:** The `.secrets/` directory is correctly listed in your `.gitignore` and `.dockerignore` files.
+    *   **6.3. Share DVC Google Drive Folder:**
+        *   Go to the Google Drive folder used as your DVC remote (the ID is in `.dvc/config`, e.g., `gdrive://YOUR_GDRIVE_FOLDER_ID`).
+        *   Share this folder with the **service account's email address** (e.g., `your-sa-name@your-gcp-project-id.iam.gserviceaccount.com`), granting it **"Editor"** permissions.
+    *   **6.4. DVC Configuration (`.dvc/config` and `.dvc/config.local`):**
+        *   Your primary DVC remote configuration is in `.dvc/config`:
+            ```ini
+            [core]
+                remote = gdrive
+            ['remote "gdrive"']
+                url = gdrive://19qyjvhry7pP9AF4q03hbKl4M5EWhrtk2 # Your actual folder ID
+                gdrive_use_service_account = true
+            ```
+        *   For local host DVC usage when `GDRIVE_CREDENTIALS_DATA` env var is not set, `.dvc/config.local` can point to the key file:
+            ```ini
+            # .dvc/config.local (This file IS gitignored by .dvc/.gitignore)
+            ['remote "gdrive"']
+                gdrive_service_account_json_file_path = ../.secrets/gdrive-dvc-service-account.json
+            ```
+            *(Note: Inside Docker, the `docker-entrypoint.sh` script primarily relies on `GDRIVE_CREDENTIALS_DATA_CONTENT` or the mounted key file via `GDRIVE_KEY_FILE_PATH_IN_CONTAINER` for DVC authentication.)*
+    *   **6.5. DVC Cache (Host Setup):**
+        Run `make ensure_host_dvc_cache` on the host once to create the DVC cache directory if it doesn't exist.
 
 ## 6. Usage Instructions
 
-1.  **Activate Environment:**
-    ```bash
-    source .venv/bin/activate # Or Windows equivalent
-    ```
-2.  **Process Raw Data (Download via DVC & Extract Archive):**
-    -   Ensure you have completed **Section 5: Setting Up DVC** if this is your first time or if you are setting up your own DVC remote. This includes configuring your remote and, if you are the first to set up this dataset on your remote, pushing the raw data to it (as per Step 5.3).
-    -   To download the DVC-tracked raw data (e.g., `imagenette2-160.tgz`) and then extract it, run:
-        ```bash
-        make process_data
-        ```
-    -   This command will first attempt to run `make dvc_pull` (which executes `dvc pull` to download all DVC-tracked files from your configured remote, including `data/raw/imagenette2-160.tgz`).
-    -   Then, it will extract `data/raw/imagenette2-160.tgz` into `data/processed/imagenette2-160/`.
+All primary operations can be run via `make` commands from the project root directory.
+Hydra configurations can be overridden by passing them via the `ARGS` variable to `make`.
 
-3.  **Run Baseline Model Training:**
-    *(Ensure WandB is set up if you want to log to your own WandB account - see `conf/config.yaml` to set your project/entity, and run `wandb login` once if needed).*
-    -   Execute the training using the Makefile (uses `conf/config.yaml` by default):
-        ```bash
-        make train
-        ```
-    -   Monitor progress in the terminal and on your WandB project dashboard (if configured).
-    -   Hydra will create an output directory (e.g., `outputs/YYYY-MM-DD/HH-MM-SS/`). Inside this directory, you will find logs (`train.log`), Hydra configurations (`.hydra/`), and the saved model checkpoints: `best_model.pth` (based on validation accuracy) and `final_model.pth` (from the last epoch).
-    -   *Note: If you wish to version your trained model with DVC, refer to the example in Section 5.4 on how to use `dvc add` to track a model from the `outputs/` directory, potentially placing it into the `models/` directory under a new name.*
+**Example for passing Hydra/Script arguments using `ARGS`:**
+*   `make train ARGS="training.epochs=5 model.name=resnet34"`
+*   `make docker_train ARGS="training.batch_size=32 training.profiler.enabled=true"`
+*   `make test ARGS="-k specific_test_name --verbose"` (for passing pytest specific args)
 
-    *   **Override Config (Example):**
+### 6.1. Working Locally on Your Host Machine
+(Ensure your virtual environment is activated)
+
+*   **Pull DVC Data:**
+    *   For host DVC operations using a service account, either ensure the `GDRIVE_CREDENTIALS_DATA` environment variable is set with the JSON key content, or that `.dvc/config.local` points to your key file.
         ```bash
-        python -m drift_detector_pipeline.modeling.train training.epochs=5 training.learning_rate=0.0005
+        # Example for setting env var (Linux/macOS):
+        # export GDRIVE_CREDENTIALS_DATA=$(cat .secrets/gdrive-dvc-service-account.json | tr -d '\n\r')
+        make dvc_pull
         ```
-4.  **Run Linting/Formatting:**
+*   **Process Data (Extract, etc.):** (Requires DVC data to be pulled first)
     ```bash
-    make lint  # Check formatting and linting using Ruff
-    make format # Apply formatting and fix linting issues using Ruff
+    make process_data # ARGS can be passed if dataset.py uses Hydra for its parameters
     ```
-5.  **Run Tests:**
+*   **Train Model:**
     ```bash
-    make test # Executes unit tests defined in the tests/ directory using pytest
+    make train ARGS="training.epochs=10"
+    # For a short run with specific learning rate:
+    make train ARGS="training.epochs=1 training.learning_rate=0.0005"
+    ```
+*   **Tests, Linting, Formatting, Cleaning:**
+    ```bash
+    make test ARGS="-m 'not slow'" # Example: run tests not marked as 'slow'
+    make lint
+    make format
+    make clean
     ```
 
-## 7. Contribution Summary (Phase 1)
+### 6.2. Working with Docker (Recommended for Reproducible Environments)
+The `docker-entrypoint.sh` script handles DVC authentication inside containers.
+
+*   **Build Docker Image:** (Needed once, or after `Dockerfile`/dependency changes)
+    ```bash
+    make docker_build
+    # Specify tag: make docker_build IMAGE_TAG=my-custom-tag
+    ```
+*   **Run Interactive Shell in Docker:**
+    ```bash
+    make docker_shell
+    ```
+*   **Pull DVC Data *Inside* Docker:**
+    ```bash
+    make docker_dvc_pull
+    ```
+*   **Train Model *Inside* Docker:**
+    ```bash
+    make docker_train ARGS="training.epochs=10"
+    # Example with profiler enabled for a short run:
+    make docker_train ARGS="training.epochs=1 training.profiler.enabled=true training.profiler.active=10"
+    ```
+*   **Run Tests *Inside* Docker:**
+    ```bash
+    make docker_test ARGS="-m 'not slow'"
+    ```
+
+### 6.3. Key Makefile Variables for Docker & Customization
+Override these on the command line if needed:
+*   `IMAGE_NAME`, `IMAGE_TAG`
+*   `HOST_DVC_CACHE_DIR`, `HOST_SERVICE_ACCOUNT_KEY_PATH`
+*   `DOCKER_MEMORY_OPTS`
+*   `ARGS`: For passing Hydra or script-specific arguments (e.g., `ARGS="training.epochs=5"`).
+*   `WANDB_API_KEY`: (Set in host env/.env) API key for Weights & Biases.
+*   `CI_MODE`: (Set to `true` for CI-specific behaviors).
+
+## 7. Performance Profiling
+
+### 7.1. Performance Profiling with PyTorch Profiler
+The PyTorch Profiler is integrated into `drift_detector_pipeline/modeling/train.py` to analyze performance.
+
+*   **Configuration:** Enable and configure the profiler in `conf/config.yaml` under the `training.profiler` section:
+    ```yaml
+    # In conf/config.yaml
+    training:
+      # ... other training params ...
+      profiler:
+        enabled: false # Set to true to enable profiling
+        wait: 1
+        warmup: 1
+        active: 3      # Number of batches to actively profile per cycle
+        repeat: 1      # Number of profiling cycles
+        log_dir: "pytorch_profiler_logs" # Subdirectory in Hydra's output for traces
+        export_chrome_trace: true  # For TensorBoard/Perfetto
+        record_shapes: false     # Optional: records shapes of operator inputs
+        profile_memory: false    # Optional: tracks tensor memory allocations
+        with_stack: false        # Optional: records source information (adds overhead)
+        with_flops: true         # Optional: records FLOPs for operators
+        with_modules: true       # Optional: correlates operators with model hierarchy
+    ```
+*   **Running a Profiled Session:**
+    Pass Hydra overrides via the `ARGS` variable in `make`:
+    *   **Locally:**
+        ```bash
+        make train ARGS="training.profiler.enabled=true training.epochs=2 training.profiler.active=10"
+        ```
+    *   **In Docker:**
+        ```bash
+        make docker_train ARGS="training.profiler.enabled=true training.epochs=2 training.profiler.active=10"
+        ```
+*   **Viewing Profiler Traces:**
+    1.  Profiler traces (`.json` files) are saved in the run's output directory: `outputs/YOUR_RUN_ID/pytorch_profiler_logs/`.
+    2.  Use **TensorBoard** to view them:
+        ```bash
+        pip install tensorboard # If not already installed
+        tensorboard --logdir path/to/your/run/pytorch_profiler_logs/
+        # Or point to the parent 'outputs/' directory: tensorboard --logdir outputs/
+        ```
+        Open the URL (default: `http://localhost:6006`) and go to the "PyTorch Profiler" tab.
+    3.  Alternatively, open trace files with the **Perfetto UI** at `ui.perfetto.dev`.
+*   **Interpreting Traces:**
+    *   In TensorBoard, examine the "Overview" (step time breakdown), "Operator View" (expensive CPU/GPU ops), "Kernel View" (GPU kernel times), and "Trace View" (timeline).
+    *   Look for: CPU vs. GPU imbalances, data loading bottlenecks, long CPU-GPU transfers (`aten::copy_`), inefficient GPU kernels.
+
+## 8. Continuous Integration & Delivery (CI/CD) with GitHub Actions
+
+This project includes a GitHub Actions workflow (`.github/workflows/docker_train_pipeline.yml`) to automate:
+1.  Building the Docker image.
+2.  Running a short, CPU-only training validation job inside the container (includes DVC pull).
+3.  Running tests inside the container.
+
+**Workflow Overview (`docker_train_pipeline.yml`):**
+*   **Triggers:** Runs on pushes to `main`, `develop`, `phase2-test`; pull requests to `main`, `develop`; and can be manually dispatched.
+*   **Secrets:** Requires GitHub repository secrets: `GDRIVE_SA_KEY_JSON_CONTENT` and `WANDB_API_KEY`.
+*   **Operation:**
+    *   Builds the Docker image.
+    *   Runs `make train ARGS="..."` and `make test` inside the container. The `ARGS` for the CI `make train` call are typically hardcoded in the workflow for a short validation run (e.g., `ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu"`).
+    *   The `docker-entrypoint.sh` handles DVC authentication using the `GDRIVE_SA_KEY_JSON_CONTENT` secret.
+    *   `CI_MODE=true` is passed to `docker run`, allowing the Makefile to adjust settings (e.g., `DVC_PARALLEL_JOBS`).
+
+**To enable this CI pipeline:**
+1.  Ensure `.github/workflows/docker_train_pipeline.yml` is committed.
+2.  Configure `GDRIVE_SA_KEY_JSON_CONTENT` and `WANDB_API_KEY` secrets in your GitHub repository (Settings > Secrets and variables > Actions).
+
+## 9. Contribution Summary
+
+### PHASE 1 Contributions
+
 -   **Esteban Montelongo:** DVC setup & data versioning, `dataset.py` (extraction, transforms, dataloaders), initial documentation structure (`README.md`, `PHASE1.md`), architecture diagram, model DVC tracking, unit test implementation.
 -   **Sajith Bandara:** Hydra integration (`conf/config.yaml`, `train.py` decorator/config usage), `train.py` core structure (model loading, optimizer, scheduler, loop), Makefile setup (`train`, `process_data` rules), model saving path correction.
 -   **Arjun Kumar Sankar Chandrasekar:** WandB integration (`wandb.init`, `wandb.log`), dependency management (`pyproject.toml`, `requirements.txt`), `ruff` configuration and code formatting, testing infrastructure setup and test contributions.
 
+### PHASE 2 Contributions
 
-## 8. References & Key Tools Used
+-   **Esteban Montelongo:** Initial `Dockerfile` creation, `docker-entrypoint.sh` script for DVC authentication (GDRIVE_CREDENTIALS_DATA logic), `.dockerignore` setup, Docker build caching strategies, design and implementation of `docker_train_pipeline.yml` GitHub Actions workflow including secret management, significant refactoring of `Makefile` for Docker targets and OS-specific command handling.
+-   **Sajith Bandara:** Cross-platform compatibility enhancements for Docker-related `Makefile` targets (OS detection, volume pathing), integration of Docker shared memory (`--shm-size`), CI pipeline debugging and refinement, DVC service account authentication implementation.
+-   **Arjun Kumar Sankar Chandrasekar:** Testing and validation of Docker image builds and container execution across environments, ensuring dependency consistency within containers, updating `README.md` with detailed setup and usage instructions for Docker, DVC service account authentication, Makefile targets, GitHub Actions CI/CD pipeline, and Profiling.
+
+## 10. References & Key Tools Used
 -   **Dataset:** [Imagenette-160 (v2)](https://github.com/fastai/imagenette)
 -   **ML Framework:** [PyTorch](https://pytorch.org/)
 -   **Model Zoo:** [timm (PyTorch Image Models)](https://github.com/huggingface/pytorch-image-models)
--   **Data Versioning:** [DVC (Data Version Control)](https://dvc.org/) + Google Drive
+-   **Containerization:** [Docker](https://www.docker.com/)
+-   **Data Versioning:** [DVC (Data Version Control)](https://dvc.org/) + Google Drive (via Service Account)
 -   **Configuration Management:** [Hydra](https://hydra.cc/)
 -   **Experiment Tracking:** [Weights & Biases (WandB)](https://wandb.ai/)
+-   **Performance Profiling:** [PyTorch Profiler](https://pytorch.org/docs/stable/profiler.html)
 -   **Code Quality:** [Ruff](https://github.com/astral-sh/ruff) (Linting & Formatting), [Pytest](https://pytest.org/) (Testing)
 -   **Version Control:** [Git](https://git-scm.com/) & [GitHub](https://github.com/)
+-   **CI/CD:** [GitHub Actions](https://github.com/features/actions)
 -   **Build/Task Runner:** [GNU Make](https://www.gnu.org/software/make/)
 -   **Python Environment:** `venv` + `pip`
 -   **Project Template:** [Cookiecutter Data Science](https://cookiecutter-data-science.drivendata.org/)

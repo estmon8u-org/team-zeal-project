@@ -192,11 +192,18 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Adding a `.ignore` directory that I want to ignore
-.ignore
+# Adding a `.secrets` directory that I want to ignore
+.secrets
 
-# Wandb directories
+# Wandb directory
 .wandb/
+wandb/
 
-# Hydra output
+# Output directories from local runs
 outputs/
+
+# Model files
+*.pth
+
+# Pytorch Profiler output
+pytorch_profiler_logs

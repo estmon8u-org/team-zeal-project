@@ -24,6 +24,26 @@ training:
   scheduler: "CosineAnnealingLR" # Options: CosineAnnealingLR, StepLR, None
   label_smoothing: 0.1
 
+  # --- Pytorch Profiler Parameters ---
+  profiler:                  # New or updated section for PyTorch Profiler
+      enabled: false           # Master switch: set to true to enable profiling for a run
+      # Schedule parameters: Controls when and how long to profile
+      wait: 1                  # Number of initial batches to wait before profiling starts in a cycle
+      warmup: 1                # Number of warmup batches (results discarded to stabilize hardware timings)
+      active: 3                # Number of batches to actively record profiling data
+      repeat: 1                # Number of (wait, warmup, active) cycles to perform.
+    # Set to 0 to profile for the entire `active` duration once, without repeating cycles.
+                              # If > 0, profiler will cycle through wait, warmup, active for `repeat` times.
+      
+      # Output and trace parameters
+      log_dir: "pytorch_profiler_logs" # Subdirectory within Hydra's output directory for trace files
+      export_chrome_trace: true  # Essential for viewing with TensorBoard or Perfetto UI
+      
+      # Optional detail levels (can add significant overhead, use judiciously)
+      record_shapes: false     # Records shapes of operator inputs
+      profile_memory: false    # Tracks tensor memory allocations and deallocations
+      with_stack: false        # Records source information (Python call stack) for operators
+
 # --- Runtime Parameters ---
 run:
   seed: 42               # Random seed for reproducibility
