@@ -13,6 +13,10 @@
 #   make lint / format       Static code checks / auto‑format
 #   make clean               Remove caches & artifacts
 #   make help                Show all rules
+#   make requirements        Install Python dependencies
+#   make create_environment  Create a virtual environment (.venv)
+#   make update_requirements Update requirements.txt with current dependencies
+#   make process_data        Extract and preprocess dataset. Pass Hydra args via ARGS variable.
 #
 ################################################################################
 
@@ -241,6 +245,12 @@ train: process_data
 create_environment:
 	$(PYTHON_INTERPRETER) -m venv .venv
 	@echo "Activate with: source .venv/bin/activate (Linux/macOS) or .venv\\Scripts\\activate.bat (Windows)"
+
+## Update the requirements.txt file with current dependencies
+.PHONY: update_requirements
+update_requirements:
+	@echo "Exporting dependencies to requirements.txt..."
+	$(PYTHON_INTERPRETER) -m pip freeze > requirements.txt
 
 # ----------------------------------------------------------------------------- #
 # Data pipeline
