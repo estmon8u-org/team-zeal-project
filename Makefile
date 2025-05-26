@@ -34,12 +34,10 @@ IMAGE_TAG ?= 1.0.0
 # for now we will keep them the same for both CI and local runs
 ifeq ($(CI_MODE),true)
 # CI runners (GitHub Actions, etc.)
-    DOCKER_MEMORY_OPTS := --memory=32g --memory-swap=32g --shm-size=16g
-    DVC_PARALLEL_JOBS  := -j 4
+    DOCKER_MEMORY_OPTS := --memory=32g --memory-swap=32g --shm-size=16g  --ipc=host
 else
 # Local / self-hosted runners
-    DOCKER_MEMORY_OPTS ?= --memory=32g --memory-swap=32g --shm-size=16g
-    DVC_PARALLEL_JOBS  := -j 4
+    DOCKER_MEMORY_OPTS ?= --memory=32g --memory-swap=32g --shm-size=16g  --ipc=host
 endif
 
 # ----------------------------------------------------------------------------- #
@@ -51,6 +49,7 @@ ifeq ($(OS),Windows_NT)
 	HOST_DVC_CACHE_DIR := $(USERPROFILE)/.cache/dvc
 endif
 CONTAINER_DVC_CACHE_PATH := /root/.dvc/cache   # DVC default inside image
+DVC_PARALLEL_JOBS  := -j 2
 
 # ----------------------------------------------------------------------------- #
 # Google‑Drive service account (for DVC remote)
