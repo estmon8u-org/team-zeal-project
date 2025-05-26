@@ -27,16 +27,19 @@ CI_MODE ?= false
 # Docker image
 # ----------------------------------------------------------------------------- #
 
+IMAGE_NAME ?= team-zeal-project
+IMAGE_TAG ?= 1.0.0
+
+# Allows us to choose different memory settings based on the environment
+# for now we will keep them the same for both CI and local runs
 ifeq ($(CI_MODE),true)
-    DOCKER_MEMORY_OPTS := --memory=32g --memory-swap=32g --shm-size=32g
-    # Lean training/pull defaults for CI
-    DEFAULT_HYDRA_ARGS := run.device=cpu data.dataloader_workers=1 training.batch_size=32
-    DVC_PARALLEL_JOBS  := -j 2          # dvc pull concurrency
+# CI runners (GitHub Actions, etc.)
+    DOCKER_MEMORY_OPTS := --memory=32g --memory-swap=32g --shm-size=16g
+    DVC_PARALLEL_JOBS  := -j 4
 else
-    # Local / self-hosted runners
-    DOCKER_MEMORY_OPTS ?= --memory=8g --memory-swap=10g --shm-size=4g
-    DEFAULT_HYDRA_ARGS :=
-    DVC_PARALLEL_JOBS  :=
+# Local / self-hosted runners
+    DOCKER_MEMORY_OPTS ?= --memory=32g --memory-swap=32g --shm-size=16g
+    DVC_PARALLEL_JOBS  := -j 4
 endif
 
 # ----------------------------------------------------------------------------- #
@@ -147,7 +150,7 @@ docker_dvc_pull: ensure_host_dvc_cache check_service_account_key docker_build
 docker_train: ensure_host_dvc_cache check_service_account_key docker_build
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(USER_ARGS) \
-		$(DOCKER_MEMORY_OPTS) $(IMAGE_NAME):$(IMAGE_TAG) make train HYDRA_ARGS="$(DEFAULT_HYDRA_ARGS) $(HYDRA_ARGS)"
+		$(DOCKER_MEMORY_OPTS) $(IMAGE_NAME):$(IMAGE_TAG) make train
 
 ## Run tests inside Docker container
 .PHONY: docker_test
