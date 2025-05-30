@@ -31,6 +31,9 @@ def clean_project(project_root="."):
         "dist",  # Common distribution directory
         "htmlcov",  # HTML coverage reports
         "site",  # MkDocs build output (if 'docs/site/' is the pattern)
+        "outputs", # Custom output directories, adjust as needed
+        "pytorch_profiler_logs",  # Example for PyTorch profiler logs
+        "wandb",  # Weights & Biases logs
         # Add other DVC cache or temp directories if they are not handled by 'dvc gc'
         # and you want 'make clean' to remove them (use with caution for DVC internals).
     ]
