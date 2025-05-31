@@ -1,0 +1,148 @@
+###############################################################################
+# Workflow  : Continuous Machine Learning (CML) Reporting
+# Triggered :
+#   • workflow_run → after docker-train-lint completes successfully on main, develop
+#   • manual run  → workflow_dispatch
+# Purpose   :
+#   1. Download trained model artifacts from docker-train-lint workflow
+#   2. Generate visual metrics reports (accuracy plots, loss curves)
+#   3. Post reports as comments to related PRs or commits
+#   4. Enable ML-focused code review with performance metrics visibility
+###############################################################################
+
+name: CML Report
+
+on:
+  workflow_run:
+    workflows: ["docker-train-lint"]
+    types:
+      - completed
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  ###############################################################################
+  # Job: Generate CML Report
+  # Creates and posts training metrics report to PR/commit
+  ###############################################################################
+  generate-report:
+    name: Generate CML Report
+    # Only run if the docker-train-lint workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on:
+      group: default
+      labels: ubuntu-latest-m
+    timeout-minutes: 30  # Reduced since we're not training again
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Check out the PR that triggered the workflow_run
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      # Setup CML for report generation and posting
+      - name: Setup CML
+        uses: iterative/setup-cml@v1
+
+      # Download artifacts from the training job
+      - name: Download training artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: docker-train-lint.yml
+          workflow_conclusion: success
+          name: cml-artifacts
+          # Use the same run ID that triggered this workflow
+          run_id: ${{ github.event.workflow_run.id }}
+          path: ./
+
+      # Debug step to verify artifacts were downloaded
+      - name: Display downloaded artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          ls -la cml_plots/ 2>/dev/null || echo "⚠️  cml_plots directory not found"
+          ls -la *.json 2>/dev/null || echo "⚠️  No JSON files found in root directory"
+
+      # Generate the CML report with metrics and visualizations
+      - name: Generate and Post CML Report
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Initialize report with header
+          cat > report.md << 'EOF'
+          ## Model Training Results
+          ### Metrics Summary
+          EOF
+
+          # Process metrics file if available
+          if [ -f "cml_metrics.json" ]; then
+            echo "Processing metrics from cml_metrics.json..."
+
+            # Use jq to extract and format metrics into a markdown table
+            jq -r '
+              "| Metric | Value |",
+              "| --- | --- |",
+              "| **Model** | \(.model_name) |",
+              "| **Best Validation Accuracy** | \(.best_val_accuracy)% (epoch \(.best_epoch)) |",
+              "| **Final Validation Accuracy** | \(.final_val_accuracy)% |",
+              "| **Final Validation Loss** | \(.final_val_loss) |",
+              "| **Training Time** | \(.total_training_time_sec) seconds |",
+              "| **Epochs Completed** | \(.epochs_completed) |"
+            ' cml_metrics.json >> report.md
+          else
+            # Fallback message if metrics are missing
+            echo "**Warning**: No metrics file found. Training may have failed." >> report.md
+            echo "" >> report.md
+            echo "Available files in workspace:" >> report.md
+            echo "\`\`\`" >> report.md
+            find . -type f -name "*.json" | head -20 | sort >> report.md
+            echo "\`\`\`" >> report.md
+          fi
+
+          # Add section for training curves
+          echo -e "\n### Learning Curves" >> report.md
+
+          # Helper function to add plot or warning message
+          add_plot() {
+            local plot_file=$1
+            local plot_title=$2
+
+            if [ -f "$plot_file" ]; then
+              echo "#### $plot_title" >> report.md
+              # CML publishes the image and returns markdown reference
+              cml-publish "$plot_file" --md >> report.md
+            else
+              echo "**$plot_title** plot not found at \`$plot_file\`" >> report.md
+            fi
+          }
+
+          # Add training/validation loss plot
+          add_plot "cml_plots/loss_plot.png" "Training & Validation Loss"
+
+          # Add validation accuracy plot
+          add_plot "cml_plots/accuracy_plot.png" "Validation Accuracy"
+
+          # Add workflow metadata
+          cat >> report.md << EOF
+
+          ### Workflow Information
+          - **Triggered by**: ${{ github.event_name }}
+          - **Workflow**: \`docker-train-lint\` → \`CML Report\`
+          - **Branch**: \`${{ github.event.workflow_run.head_branch }}\`
+          - **Commit**: \`${GITHUB_SHA::7}\`
+          - **Report generated**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          EOF
+
+          # Post the report as a comment
+          # First, try to extract PR number from the workflow run event
+          PR_NUMBER=$(jq -r '.pull_requests[0].number // empty' <<< '${{ toJson(github.event.workflow_run) }}')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo " Posting report to PR #${PR_NUMBER}"
+            cml comment create report.md --target-pull-request $PR_NUMBER
+          else
+            echo " No PR number found, posting report to commit"
+            cml comment create report.md
+          fi
+
+          echo " CML report posted successfully!"

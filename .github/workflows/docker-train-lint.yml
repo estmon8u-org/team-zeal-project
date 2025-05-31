@@ -1,0 +1,218 @@
+###############################################################################
+# Workflow  : Dockerized Training Pipeline (CI) + Linting
+# Triggered :
+#   • push        → main, develop
+#   • pull_request→ main, develop
+#   • manual run  → workflow_dispatch
+# Purpose   :
+#   1. Lint and format check the codebase
+#   2. Build the project Docker image in CI and push to GCP Artifact Registry
+#   3. Launch a short CPU‑only training run inside the container
+#      (downloads data via DVC + logs to Weights & Biases)
+#   4. Run tests to verify code quality and functionality
+###############################################################################
+
+name: docker-train-lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# Global environment variables to reduce duplication
+env:
+  # GCP Configuration
+  GCP_REGION: us-west2
+  ARTIFACT_REGISTRY_REPO: team-zeal-project
+  IMAGE_NAME: team-zeal-project
+  # Docker resource limits for consistent container execution
+  DOCKER_MEMORY_OPTS: "--memory=8g --memory-swap=8g --shm-size=4g"
+
+jobs:
+  ###############################################################################
+  # Job 1: Lint and Format Check
+  # Fast feedback on code quality before expensive operations
+  ###############################################################################
+  lint:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'  # Cache pip dependencies for faster runs
+
+      - name: Install and Run Ruff
+        run: |
+          echo "Installing Ruff linter..."
+          python -m pip install ruff
+
+          echo "Checking code formatting..."
+          ruff format --check .
+
+          echo "Running linter..."
+          ruff check .
+
+  ###############################################################################
+  # Job 2: Build Docker Image
+  # Builds once and pushes to GCP Artifact Registry for reuse
+  ###############################################################################
+  build:
+    name: Build Docker Image
+    needs: lint  # Only build if code passes quality checks
+    runs-on:
+      group: default
+      labels: ubuntu-latest-m  # Medium runner for faster builds
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git SHA
+
+      # Use our composite action for GCP setup
+      - name: Setup GCP and Docker
+        uses: ./.github/actions/gcp-setup
+        with:
+          gcp-sa-key: ${{ secrets.GCP_SA_KEY }}
+          gcp-region: ${{ env.GCP_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - id: build
+        name: Build and Push Docker image to GCP Artifact Registry
+        env:
+          # Define REGISTRY_PATH at step level where both env and secrets are available
+          REGISTRY_PATH: "${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}"
+        run: |
+          FULL_IMAGE_PATH="${REGISTRY_PATH}/${{ env.IMAGE_NAME }}"
+          TAGS=("latest" "ci" "${GITHUB_SHA::7}")
+
+          echo "Building Docker image: ${IMAGE_NAME}:latest"
+          docker build -t "${IMAGE_NAME}:latest" .
+
+          echo "Tagging and pushing to GCP Artifact Registry..."
+          for tag in "${TAGS[@]}"; do
+            echo "Processing tag: ${tag}"
+            docker tag "${IMAGE_NAME}:latest" "${FULL_IMAGE_PATH}:${tag}"
+            docker push "${FULL_IMAGE_PATH}:${tag}"
+          done
+
+          echo "Successfully pushed image to: ${FULL_IMAGE_PATH}"
+
+  ###############################################################################
+  # Job 3: Train and Test (Parallel Execution)
+  # Uses matrix strategy to run training and testing in parallel
+  ###############################################################################
+  train-and-test:
+    name: ${{ matrix.task == 'train' && 'Run Training' || 'Run Tests' }}
+    needs: build  # Requires the Docker image to be built
+    runs-on:
+      group: default
+      labels: ubuntu-latest-m
+    timeout-minutes: 240  # 4 hours max (training can be long)
+    strategy:
+      matrix:
+        task: [train, test]  # Run both tasks in parallel
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Reuse composite action for GCP setup
+      - name: Setup GCP and Docker
+        uses: ./.github/actions/gcp-setup
+        with:
+          gcp-sa-key: ${{ secrets.GCP_SA_KEY }}
+          gcp-region: ${{ env.GCP_REGION }}
+
+      - name: Pull Docker image from GCP Artifact Registry
+        env:
+          # Define REGISTRY_PATH at step level
+          REGISTRY_PATH: "${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}"
+        run: |
+          FULL_IMAGE_PATH="${REGISTRY_PATH}/${{ env.IMAGE_NAME }}"
+          echo "Pulling image: ${FULL_IMAGE_PATH}:latest"
+          docker pull "${FULL_IMAGE_PATH}:latest"
+
+      # Set parameters for training based on branch
+      - name: Set training parameters
+        if: matrix.task == 'train'
+        id: params
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "epochs=10" >> $GITHUB_OUTPUT
+            echo "model=resnet18" >> $GITHUB_OUTPUT
+            echo "Running on main branch - full training configuration"
+          else
+            echo "epochs=1" >> $GITHUB_OUTPUT
+            echo "model=resnet10t" >> $GITHUB_OUTPUT
+            echo "Running on develop branch - quick validation configuration"
+          fi
+
+      # Execute the appropriate task in Docker
+      - name: Run ${{ matrix.task }} in Docker
+        env:
+          # Service account for Google Drive access (DVC)
+          GDRIVE_CREDENTIALS_DATA_CONTENT: ${{ secrets.GDRIVE_SA_KEY_JSON_CONTENT }}
+          # Weights & Biases API key for experiment tracking
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+          # Define REGISTRY_PATH at step level
+          REGISTRY_PATH: "${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}"
+        run: |
+          FULL_IMAGE_PATH="${REGISTRY_PATH}/${{ env.IMAGE_NAME }}"
+
+          if [[ "${{ matrix.task }}" == "train" ]]; then
+            echo "Starting training with ${{ steps.params.outputs.model }} for ${{ steps.params.outputs.epochs }} epochs..."
+
+            docker run --rm \
+              -v "$PWD:/app" \
+              -e GDRIVE_CREDENTIALS_DATA_CONTENT \
+              -e WANDB_API_KEY \
+              -e CI_MODE=true \
+              ${{ env.DOCKER_MEMORY_OPTS }} \
+              "${FULL_IMAGE_PATH}:latest" \
+              make train ARGS="training.epochs=${{ steps.params.outputs.epochs }} model.name=${{ steps.params.outputs.model }} data.dataloader_workers=2 run.device=cpu cml.enabled=true"
+          else
+            echo "Running tests..."
+            docker run --rm \
+              -v "$PWD:/app" \
+              -e GDRIVE_CREDENTIALS_DATA_CONTENT \
+              -e CI_MODE=true \
+              ${{ env.DOCKER_MEMORY_OPTS }} \
+              "${FULL_IMAGE_PATH}:latest" \
+              make test
+          fi
+
+      # Upload training artifacts for CML reporting
+      - name: Upload training metrics and plots for CML
+        if: matrix.task == 'train' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cml-artifacts
+          path: |
+            cml_plots/
+            cml_metrics.json
+          retention-days: 1  # Short retention for CI artifacts
+
+      # Upload the best model to GCP bucket for persistence
+      - name: Upload model to GCP
+        if: matrix.task == 'train' && success()
+        run: |
+          MODEL_BUCKET="gs://team-zeal-models"
+          MODEL_PATH="${MODEL_BUCKET}/${GITHUB_REF_NAME}/${GITHUB_SHA::7}_model.pth"
+
+          echo "Checking if model bucket exists..."
+          gsutil ls $MODEL_BUCKET || gsutil mb -p ${{ secrets.GCP_PROJECT_ID }} -l ${{ env.GCP_REGION }} $MODEL_BUCKET
+
+          echo "Uploading production model to GCS..."
+          gsutil cp best_model.pth $MODEL_PATH
+          echo "Model uploaded to: $MODEL_PATH"

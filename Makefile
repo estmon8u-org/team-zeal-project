@@ -2,17 +2,37 @@
 # Makefile — team-zeal-project
 ################################################################################
 #
-# High‑level commands:
-#   make docker_build        Build Docker image
-#   make docker_shell        Interactive shell in container
-#   make docker_train        Train model in container. Pass Hydra args via ARGS variable.
-#                            e.g., make docker_train ARGS="training.epochs=1 training.profiler.enabled=true"
-#   make train               Train model on host. Pass Hydra args via ARGS variable.
-#                            e.g., make train ARGS="training.epochs=1 training.profiler.enabled=true"
-#   make test                Run tests. Pass pytest args via ARGS variable.
-#   make lint / format       Static code checks / auto‑format
-#   make clean               Remove caches & artifacts
-#   make help                Show all rules
+# Docker Commands:
+#   make docker_build		Build Docker image
+#   make docker_shell		Interactive shell in container
+#   make docker_train		Train model in container. Pass Hydra args via ARGS variable.
+#							e.g., make docker_train ARGS="training.epochs=1 model.name=resnet18"
+#   make docker_dvc_pull	 Pull DVC data inside Docker container
+#   make docker_test		 Run tests inside Docker container
+#   make docker_cml_train	Train model with CML inside Docker container
+#   make api_docker_build	Build API Docker image
+#
+# Model Training & Testing:
+#   make train			   Train model on host. Pass Hydra args via ARGS variable.
+#							e.g., make train ARGS="training.epochs=1 model.name=resnet18"
+#   make cml_train		   Train model with CML reporting enabled
+#   make test				Run tests. Pass pytest args via ARGS variable.
+#
+# Data Management:
+#   make dvc_pull			Pull dataset with DVC on host
+#   make process_data		Extract and preprocess dataset. Pass Hydra args via ARGS variable.
+#
+# API Development:
+#   make api_run			 Run API server locally
+#   make api_requirements	Install API dependencies
+#
+# Development Utilities:
+#   make lint				Static code analysis
+#   make format			  Auto-format code
+#   make clean			   Remove Python & build caches
+#   make requirements		Install Python dependencies
+#   make create_environment  Create virtual environment (.venv)
+#   make help				Show all available rules
 #
 ################################################################################
 
@@ -20,8 +40,8 @@
 # Global settings
 # ----------------------------------------------------------------------------- #
 
-PROJECT_NAME       := team-zeal-project
-PYTHON_VERSION     := 3.10
+PROJECT_NAME	   := team-zeal-project
+PYTHON_VERSION	 := 3.10
 PYTHON_INTERPRETER := python
 CI_MODE ?= false
 
@@ -41,10 +61,10 @@ FULL_IMAGE_NAME := $(IMAGE_NAME):$(IMAGE_TAG)
 # for now we will keep them the same for both CI and local runs
 ifeq ($(CI_MODE),true)
 # CI runners (GitHub Actions, etc.)
-    DOCKER_MEMORY_OPTS := --memory=32g --memory-swap=32g --shm-size=16g  --ipc=host
+	DOCKER_MEMORY_OPTS := --memory=32g --memory-swap=32g --shm-size=16g  --ipc=host
 else
 # Local / self-hosted runners
-    DOCKER_MEMORY_OPTS ?= --memory=32g --memory-swap=32g --shm-size=16g  --ipc=host
+	DOCKER_MEMORY_OPTS ?= --memory=32g --memory-swap=32g --shm-size=16g  --ipc=host
 endif
 
 # ----------------------------------------------------------------------------- #
@@ -63,7 +83,7 @@ DVC_PARALLEL_JOBS  := -j 2
 # ----------------------------------------------------------------------------- #
 
 HOST_SERVICE_ACCOUNT_KEY_PATH ?= $(CURDIR)/.secrets/gdrive-dvc-service-account.json
-CONTAINER_KEY_FILE_PATH       := /app/.secrets/gdrive-dvc-service-account.json
+CONTAINER_KEY_FILE_PATH	   := /app/.secrets/gdrive-dvc-service-account.json
 
 # ----------------------------------------------------------------------------- #
 # Weights & Biases
@@ -75,7 +95,7 @@ ifdef WANDB_API_KEY
 endif
 DOCKER_ENV_FILE_ARG :=
 ifneq ("$(wildcard .env)","")
-    DOCKER_ENV_FILE_ARG := --env-file .env
+	DOCKER_ENV_FILE_ARG := --env-file .env
 endif
 
 # ----------------------------------------------------------------------------- #
@@ -83,18 +103,18 @@ endif
 # ----------------------------------------------------------------------------- #
 OS_FAMILY := Unknown
 ifeq ($(OS),Windows_NT)
-    OS_FAMILY := Windows
+	OS_FAMILY := Windows
 else
-    UNAME_S := $(shell uname -s)
-    ifeq ($(UNAME_S),Linux)
-        OS_FAMILY := Linux
-    else ifeq ($(UNAME_S),Darwin)
-        OS_FAMILY := Darwin
-    else ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
-        OS_FAMILY := Windows
-    else ifeq ($(findstring CYGWIN,$(UNAME_S)),CYGWIN)
-        OS_FAMILY := Windows
-    endif
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		OS_FAMILY := Linux
+	else ifeq ($(UNAME_S),Darwin)
+		OS_FAMILY := Darwin
+	else ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
+		OS_FAMILY := Windows
+	else ifeq ($(findstring CYGWIN,$(UNAME_S)),CYGWIN)
+		OS_FAMILY := Windows
+	endif
 endif
 
 ifeq ($(OS_FAMILY),Windows)
@@ -176,7 +196,7 @@ docker_train: ensure_host_dvc_cache check_service_account_key docker_build
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(DOCKER_ENV_FILE_ARG) $(USER_ARGS) \
 		-e CI_MODE=$(CI_MODE) \
-		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make train ARGS="$(ARGS)" # Pass ARGS to inner make
+		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make train ARGS="$(ARGS)"
 
 ## Run tests inside Docker container. Pass pytest args via ARGS="..."
 .PHONY: docker_test
@@ -184,7 +204,31 @@ docker_test: ensure_host_dvc_cache check_service_account_key docker_build
 	@echo "Running 'make test ARGS=\"$(ARGS)\"' inside Docker container..."
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(DOCKER_ENV_FILE_ARG) $(USER_ARGS) \
-		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make test ARGS="$(ARGS)" # Pass ARGS to inner make
+		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make test ARGS="$(ARGS)"
+
+## Train model with CML inside Docker container
+.PHONY: docker_cml_train
+docker_cml_train: ensure_host_dvc_cache check_service_account_key docker_build
+	@echo "Running 'make train' with CML enabled inside Docker container..."
+	docker run -it --rm \
+		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(DOCKER_ENV_FILE_ARG) $(USER_ARGS) \
+		-e CI_MODE=$(CI_MODE) \
+		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make train ARGS="cml.enabled=true $(ARGS)"
+
+## Build API Docker image
+.PHONY: api_docker_build
+api_docker_build:
+	docker build -t team-zeal-api:latest -f api/Dockerfile ./api
+
+## Create API Dockerfile
+api/Dockerfile:
+	@echo "FROM python:3.10-slim" > api/Dockerfile
+	@echo "WORKDIR /app" >> api/Dockerfile
+	@echo "COPY requirements.txt ." >> api/Dockerfile
+	@echo "RUN pip install --no-cache-dir -r requirements.txt" >> api/Dockerfile
+	@echo "COPY . ." >> api/Dockerfile
+	@echo "CMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8008\"]" >> api/Dockerfile
+	@echo "Created api/Dockerfile"
 
 # ----------------------------------------------------------------------------- #
 # Host‑side utilities
@@ -241,6 +285,28 @@ train: process_data
 create_environment:
 	$(PYTHON_INTERPRETER) -m venv .venv
 	@echo "Activate with: source .venv/bin/activate (Linux/macOS) or .venv\\Scripts\\activate.bat (Windows)"
+
+## Train model with CML reporting enabled
+.PHONY: cml_train
+cml_train: process_data
+	@echo "Starting model training with CML reporting enabled..."
+	$(PYTHON_INTERPRETER) -m drift_detector_pipeline.modeling.train cml.enabled=true $(ARGS)
+
+
+# ----------------------------------------------------------------------------- #
+# API server
+# ----------------------------------------------------------------------------- #
+
+## Run API server locally
+.PHONY: api_run
+api_run:
+	cd api && python -m uvicorn main:app --reload --port 8008
+
+## Install API dependencies
+.PHONY: api_requirements
+api_requirements:
+	cd api && $(PYTHON_INTERPRETER) -m pip install -r requirements.txt
+
 
 # ----------------------------------------------------------------------------- #
 # Data pipeline

@@ -9,6 +9,7 @@ data:
 
 # --- Model Parameters ---
 model:
+  # Available models: https://timm.fast.ai/?utm_source=chatgpt.com#List-Models-with-Pretrained-Weights
   name: "resnet18"       # Name of the model from timm
   pretrained: True       # Load ImageNet pre-trained weights
   num_classes: 10        # Number of classes in Imagenette
@@ -48,6 +49,12 @@ training:
 run:
   seed: 42               # Random seed for reproducibility
   device: "cuda"         # Target device: "cuda" or "cpu"
+
+# --- CML Parameters (For Continuous ML Reporting) ---
+cml:
+  enabled: false         # Set to true to enable CML reporting
+  plots_dir: "cml_plots"  # Directory for CML plots
+  metrics_file: "cml_metrics.json"  # File to store metrics for CML
 
 # --- Experiment Tracking (WandB) ---
 wandb:
