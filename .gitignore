@@ -210,3 +210,8 @@ pytorch_profiler_logs
 
 # Test specific folder
 dummy/
+
+# CML-related files
+cml_plots/
+cml_metrics.json
+report.md

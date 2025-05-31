@@ -176,7 +176,7 @@ docker_train: ensure_host_dvc_cache check_service_account_key docker_build
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(DOCKER_ENV_FILE_ARG) $(USER_ARGS) \
 		-e CI_MODE=$(CI_MODE) \
-		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make train ARGS="$(ARGS)" # Pass ARGS to inner make
+		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make train ARGS="$(ARGS)"
 
 ## Run tests inside Docker container. Pass pytest args via ARGS="..."
 .PHONY: docker_test
@@ -184,7 +184,16 @@ docker_test: ensure_host_dvc_cache check_service_account_key docker_build
 	@echo "Running 'make test ARGS=\"$(ARGS)\"' inside Docker container..."
 	docker run -it --rm \
 		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(DOCKER_ENV_FILE_ARG) $(USER_ARGS) \
-		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make test ARGS="$(ARGS)" # Pass ARGS to inner make
+		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make test ARGS="$(ARGS)"
+
+## Train model with CML inside Docker container
+.PHONY: docker_cml_train
+docker_cml_train: ensure_host_dvc_cache check_service_account_key docker_build
+	@echo "Running 'make train' with CML enabled inside Docker container..."
+	docker run -it --rm \
+		$(DOCKER_VOLUMES) $(GDRIVE_ENV_ARGS) $(WANDB_ARGS) $(DOCKER_ENV_FILE_ARG) $(USER_ARGS) \
+		-e CI_MODE=$(CI_MODE) \
+		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make train ARGS="cml.enabled=true $(ARGS)"
 
 # ----------------------------------------------------------------------------- #
 # Host‑side utilities
@@ -241,6 +250,13 @@ train: process_data
 create_environment:
 	$(PYTHON_INTERPRETER) -m venv .venv
 	@echo "Activate with: source .venv/bin/activate (Linux/macOS) or .venv\\Scripts\\activate.bat (Windows)"
+
+## Train model with CML reporting enabled
+.PHONY: cml_train
+cml_train: process_data
+	@echo "Starting model training with CML reporting enabled..."
+	$(PYTHON_INTERPRETER) -m drift_detector_pipeline.modeling.train cml.enabled=true $(ARGS)
+
 
 # ----------------------------------------------------------------------------- #
 # Data pipeline

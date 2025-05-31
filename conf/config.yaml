@@ -49,6 +49,12 @@ run:
   seed: 42               # Random seed for reproducibility
   device: "cuda"         # Target device: "cuda" or "cpu"
 
+# --- CML Parameters (For Continuous ML Reporting) ---
+cml:
+  enabled: false         # Set to true to enable CML reporting
+  plots_dir: "cml_plots"  # Directory for CML plots
+  metrics_file: "cml_metrics.json"  # File to store metrics for CML
+
 # --- Experiment Tracking (WandB) ---
 wandb:
   project: "zeal-imagenette-drift"  # Your WandB project name
