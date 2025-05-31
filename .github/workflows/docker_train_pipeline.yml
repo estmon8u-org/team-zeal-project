@@ -177,8 +177,6 @@ jobs:
             make train ARGS="training.epochs=$EPOCHS model.name=$MODEL data.dataloader_workers=2 run.device=cpu cml.enabled=true"
 
       - name: Upload training metrics and plots for CML
-        # For develop branch, upload only if explicitly needed
-        if: success() && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request')
         uses: actions/upload-artifact@v4
         with:
           name: cml-artifacts
@@ -189,7 +187,6 @@ jobs:
 
       # Upload the best model to GCP bucket
       - name: Upload model to GCP
-        if: success() && github.ref == 'refs/heads/main'
         run: |
           GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
           MODEL_BUCKET="gs://team-zeal-models"
