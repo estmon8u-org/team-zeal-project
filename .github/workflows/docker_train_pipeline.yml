@@ -151,9 +151,9 @@ jobs:
           docker pull "${IMAGE_PATH}"
           echo "registry_image_path=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}" >> $GITHUB_ENV
 
+      # In docker_train_pipeline.yml, train job
       - name: Run DVC pull + training in Docker
         run: |
-          echo "Running training with image: ${registry_image_path}:latest"
           docker run --rm \
             -v "$PWD:/app" \
             -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
@@ -161,7 +161,17 @@ jobs:
             -e CI_MODE=true \
             $DOCKER_MEMORY_OPTS \
             "${registry_image_path}:latest" \
-            make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu"
+            make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu cml.enabled=true"
+
+      # Add this after training completes
+      - name: Upload training metrics and plots for CML
+        uses: actions/upload-artifact@v4
+        with:
+          name: cml-artifacts
+          path: |
+            cml_plots/
+            cml_metrics.json
+          retention-days: 1
 
   test:
     name: Run Tests

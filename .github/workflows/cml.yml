@@ -1,3 +1,15 @@
+###############################################################################
+# Workflow  : Continuous Machine Learning (CML) Reporting
+# Triggered :
+#   • workflow_run → after docker-train-lint completes successfully on main, develop
+#   • manual run  → workflow_dispatch
+# Purpose   :
+#   1. Download trained model artifacts from docker-train-lint workflow
+#   2. Generate visual metrics reports (accuracy plots, loss curves)
+#   3. Post reports as comments to related PRs or commits
+#   4. Enable ML-focused code review with performance metrics visibility
+###############################################################################
+
 name: CML Report
 
 on:
@@ -16,55 +28,33 @@ jobs:
     runs-on:
       group: default
       labels: ubuntu-latest-m
-    timeout-minutes: 120
-    env:
-      GCP_REGION: us-central1
-      ARTIFACT_REGISTRY_REPO: team-zeal-project
-      IMAGE_NAME_IN_REGISTRY: team-zeal-project
-      SA_KEY: ${{ secrets.GDRIVE_SA_KEY_JSON_CONTENT }}
-      WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
-      DOCKER_MEMORY_OPTS: "--memory=8g --memory-swap=8g --shm-size=4g"
+    timeout-minutes: 30  # Reduced since we're not training again
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Important: check out the PR that triggered the workflow_run
+          # Check out the PR that triggered the workflow_run
           ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
 
       - name: Setup CML
         uses: iterative/setup-cml@v1
 
-      # Authenticate to Google Cloud
-      - id: 'auth'
-        uses: 'google-github-actions/auth@v2'
+      - name: Download training artifacts
+        uses: dawidd6/action-download-artifact@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          workflow: docker-train-lint.yml
+          workflow_conclusion: success
+          name: cml-artifacts
+          # Use the same run ID that triggered this workflow
+          run_id: ${{ github.event.workflow_run.id }}
+          path: ./
 
-      # Configure Docker to use gcloud as a credential helper
-      - name: Configure Docker for GCP Artifact Registry
-        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
-
-      - name: Pull Docker image from GCP Artifact Registry
+      - name: Display downloaded artifacts
         run: |
-          GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
-          IMAGE_PATH="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}:latest"
-
-          echo "Pulling image: ${IMAGE_PATH}"
-          docker pull "${IMAGE_PATH}"
-          echo "registry_image_path=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}" >> $GITHUB_ENV
-
-      - name: Run CML training in Docker
-        run: |
-          echo "Running CML training with image: ${registry_image_path}:latest"
-          docker run --rm \
-            -v "$PWD:/app" \
-            -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
-            -e WANDB_API_KEY="$WANDB_API_KEY" \
-            -e CI_MODE=true \
-            $DOCKER_MEMORY_OPTS \
-            "${registry_image_path}:latest" \
-            make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu cml.enabled=true"
+          echo "Downloaded artifacts:"
+          ls -la cml_plots/ || echo "cml_plots directory not found"
+          ls -la *.json || echo "No JSON files found in root directory"
 
       - name: Generate CML Report
         env:
@@ -80,32 +70,58 @@ jobs:
             FINAL_LOSS=$(cat cml_metrics.json | jq -r .final_val_loss)
             TRAIN_TIME=$(cat cml_metrics.json | jq -r .total_training_time_sec)
             BEST_EPOCH=$(cat cml_metrics.json | jq -r .best_epoch)
+            MODEL_NAME=$(cat cml_metrics.json | jq -r .model_name)
+            EPOCHS_COMPLETED=$(cat cml_metrics.json | jq -r .epochs_completed)
 
             echo "| Metric | Value |" >> report.md
             echo "| --- | --- |" >> report.md
+            echo "| Model | ${MODEL_NAME} |" >> report.md
             echo "| Best Validation Accuracy | ${BEST_ACC}% (epoch ${BEST_EPOCH}) |" >> report.md
             echo "| Final Validation Accuracy | ${FINAL_ACC}% |" >> report.md
             echo "| Final Validation Loss | ${FINAL_LOSS} |" >> report.md
             echo "| Training Time | ${TRAIN_TIME} seconds |" >> report.md
+            echo "| Epochs Completed | ${EPOCHS_COMPLETED} |" >> report.md
+          else
+            echo " No metrics file found. Training may have failed." >> report.md
+            echo "Listing directory contents for debugging:" >> report.md
+            echo "\`\`\`" >> report.md
+            find . -type f -name "*.json" | sort >> report.md
+            echo "\`\`\`" >> report.md
           fi
 
           echo -e "\n### Learning Curves" >> report.md
 
           # Add plots
           if [ -f "cml_plots/loss_plot.png" ]; then
+            echo "#### Training & Validation Loss" >> report.md
             cml-publish cml_plots/loss_plot.png --md >> report.md
+          else
+            echo " Loss plot file not found. Check if training completed successfully." >> report.md
+            echo "Listing cml_plots directory for debugging:" >> report.md
+            echo "\`\`\`" >> report.md
+            find . -name "cml_plots" -type d -exec ls -la {} \; >> report.md
+            echo "\`\`\`" >> report.md
           fi
 
           if [ -f "cml_plots/accuracy_plot.png" ]; then
+            echo "#### Validation Accuracy" >> report.md
             cml-publish cml_plots/accuracy_plot.png --md >> report.md
+          else
+            echo " Accuracy plot file not found." >> report.md
           fi
+
+          echo -e "\n### Workflow Information" >> report.md
+          echo "- Run triggered by: ${{ github.event_name }}" >> report.md
+          echo "- Workflow: docker-train-lint → CML Report" >> report.md
+          echo "- Report generated: $(date)" >> report.md
 
           # Post the report as a comment on the PR
           # Get PR number from the workflow run event
           PR_NUMBER=$(jq -r '.pull_requests[0].number // empty' <<< '${{ toJson(github.event.workflow_run) }}')
           if [ -n "$PR_NUMBER" ]; then
+            echo "Posting report to PR #${PR_NUMBER}"
             cml comment create report.md --target-pull-request $PR_NUMBER
           else
-            # If PR number is not available, just post the comment to the commit
+            echo "No PR number found, posting report to commit"
             cml comment create report.md
           fi
