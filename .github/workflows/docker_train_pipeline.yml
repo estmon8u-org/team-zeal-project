@@ -1,64 +1,76 @@
 ###############################################################################
-# Workflow  : Dockerized Training Pipeline (CI)
+# Workflow  : Dockerized Training Pipeline (CI) + Linting
 # Triggered :
 #   • push        → main, develop
 #   • pull_request→ main, develop
 #   • manual run  → workflow_dispatch
 # Purpose   :
-#   1. Build the project Docker image in CI
-#   2. Launch a short CPU‑only training run inside the container
+#   1. Lint and format check the codebase
+#   2. Build the project Docker image in CI
+#   3. Launch a short CPU‑only training run inside the container
 #      (downloads data via DVC + logs to Weights & Biases)
-#   3. Run tests to verify code quality and functionality
+#   4. Run tests to verify code quality and functionality
 ###############################################################################
 
-name: docker-train
+name: docker-train-lint # Changed name slightly for clarity
 
 on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop] # Keep PR trigger for these critical branches
   workflow_dispatch:
 
 jobs:
-  train:
-    runs-on:
-      group: default          # the group you created
-      labels: ubuntu-latest-m        # 4-core / 16 GB medium runner
-    timeout-minutes: 120           # Fail job if it exceeds 2 h
+  lint: # New job for linting and formatting checks
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    env:                           # Job‑wide env vars (available to all steps)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # Match your project's Python version
+          cache: 'pip' # Cache pip dependencies
+
+      - name: Install Ruff
+        run: python -m pip install ruff # Install ruff
+
+      - name: Run Ruff Formatter Check
+        run: ruff format --check .
+
+      - name: Run Ruff Linter
+        run: ruff check .
+
+  build_and_train: # Your existing job, now dependent on 'lint'
+    name: Build Docker and Train/Test
+    needs: lint # This job will only run if the 'lint' job succeeds
+    runs-on:
+      group: default
+      labels: ubuntu-latest-m
+    timeout-minutes: 120
+    env:
       BASE_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
       IMAGE_TAG: ci
       SA_KEY: ${{ secrets.GDRIVE_SA_KEY_JSON_CONTENT }}
       WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
-
     steps:
-      #########################################################################
-      # 1. Checkout code (with full history for DVC)
-      #########################################################################
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0           # DVC may need git tags / full history
+          fetch-depth: 0 # DVC may need git tags / full history
 
-      #########################################################################
-      # 2. Buildx (multi‑platform build tool)
-      #########################################################################
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      #########################################################################
-      # 3. Build image
-      #########################################################################
       - name: Build Docker image
         run: |
           FULL_IMAGE_NAME_WITH_TAG="${BASE_IMAGE_NAME}:${IMAGE_TAG}"
           echo "Building image: $FULL_IMAGE_NAME_WITH_TAG"
           docker build -t $FULL_IMAGE_NAME_WITH_TAG .
 
-      #########################################################################
-      # 4. Run training inside the image
-      #########################################################################
       - name: Run DVC pull + training in Docker
         run: |
           FULL_IMAGE_NAME_WITH_TAG="${BASE_IMAGE_NAME}:${IMAGE_TAG}"
@@ -68,25 +80,28 @@ jobs:
             -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
             -e WANDB_API_KEY="$WANDB_API_KEY" \
             -e CI_MODE=true \
+            ${{ env.DOCKER_MEMORY_OPTS_ENV_VAR_NAME }} \ # Get memory opts from env var
             $FULL_IMAGE_NAME_WITH_TAG \
             make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu"
+        env:
+            # Define Docker memory options as an environment variable for easier management
+            DOCKER_MEMORY_OPTS_ENV_VAR_NAME: "--memory=8g --memory-swap=8g --shm-size=4g" # Adjust if needed for CI runner
 
-      #########################################################################
-      # 5. Run tests inside the image
-      #########################################################################
       - name: Run tests in Docker
         run: |
           FULL_IMAGE_NAME_WITH_TAG="${BASE_IMAGE_NAME}:${IMAGE_TAG}"
           echo "Running container from image: $FULL_IMAGE_NAME_WITH_TAG"
           docker run --rm \
             -v "$PWD:/app" \
+            -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \ # If tests need DVC data
+            -e CI_MODE=true \
+            ${{ env.DOCKER_MEMORY_OPTS_ENV_VAR_NAME }} \ # Use same memory opts
             $FULL_IMAGE_NAME_WITH_TAG \
             make test
+        env:
+            DOCKER_MEMORY_OPTS_ENV_VAR_NAME: "--memory=8g --memory-swap=8g --shm-size=4g" # Adjust if needed
 
-      #########################################################################
-      # 5. (Optional) Upload artifacts (disabled by default)
-      #########################################################################
-      # - name: Archive DVC metrics
+      # - name: Archive DVC metrics (Keep if you use it)
       #   uses: actions/upload-artifact@v3
       #   with:
       #     name: dvc-metrics
