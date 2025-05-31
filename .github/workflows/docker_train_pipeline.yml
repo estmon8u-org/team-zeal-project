@@ -68,6 +68,10 @@ jobs:
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
+      # Configure gcloud CLI
+      - name: Setup gcloud CLI
+        uses: 'google-github-actions/setup-gcloud@v2'
+
       # Configure Docker to use gcloud as a credential helper
       - name: Configure Docker for GCP Artifact Registry
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
@@ -101,17 +105,6 @@ jobs:
           # Save registry image path as output variable for later jobs
           echo "registry_image_path=${IMAGE_PATH_PREFIX}" >> $GITHUB_ENV
 
-      # Export image as tar file to share between jobs (keeping for compatibility)
-      - name: Export Docker image
-        run: docker save $LOCAL_IMAGE_NAME:latest > /tmp/image.tar
-
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: /tmp/image.tar
-          retention-days: 1
-
   train:
     name: Run Training
     needs: build
@@ -132,11 +125,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Authenticate to Google Cloud
+      # Authenticate to Google Cloud - single authentication step
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # Configure gcloud CLI without repeating credentials
+      - name: Setup gcloud CLI
+        uses: 'google-github-actions/setup-gcloud@v2'
 
       # Configure Docker to use gcloud as a credential helper
       - name: Configure Docker for GCP Artifact Registry
@@ -187,12 +184,6 @@ jobs:
             cml_metrics.json
           retention-days: 1
 
-      - name: Setup gcloud for Storage operations
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-
       # Upload the best model to GCP bucket
       - name: Upload model to GCP
         # if: success() && github.ref == 'refs/heads/main'
@@ -228,6 +219,10 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # Configure gcloud CLI without repeating credentials
+      - name: Setup gcloud CLI
+        uses: 'google-github-actions/setup-gcloud@v2'
 
       # Configure Docker to use gcloud as a credential helper
       - name: Configure Docker for GCP Artifact Registry
