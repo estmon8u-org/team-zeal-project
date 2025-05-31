@@ -138,8 +138,18 @@ jobs:
 
       - name: Pull Docker image from GCP Artifact Registry
         run: |
-          IMAGE_PATH="${{ needs.build.outputs.image-path }}"
-          echo "Pulling image: ${IMAGE_PATH}"
+          echo "Debug - Build job output: ${{ needs.build.outputs.image-path }}"
+          if [[ -z "${{ needs.build.outputs.image-path }}" ]]; then
+            echo "ERROR: image-path from build job is empty!"
+            # Fallback to constructing it ourselves
+            IMAGE_PATH="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME }}"
+            echo "Using fallback IMAGE_PATH: ${IMAGE_PATH}"
+          else
+            IMAGE_PATH="${{ needs.build.outputs.image-path }}"
+            echo "Using build job IMAGE_PATH: ${IMAGE_PATH}"
+          fi
+
+          echo "Pulling image: ${IMAGE_PATH}:latest"
           docker pull "${IMAGE_PATH}:latest"
 
       # Set parameters for training based on branch
