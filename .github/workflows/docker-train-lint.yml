@@ -70,9 +70,6 @@ jobs:
       group: default
       labels: ubuntu-latest-m  # Medium runner for faster builds
     timeout-minutes: 30
-    # Output the image path for downstream jobs
-    outputs:
-      image-path: ${{ steps.build.outputs.image-path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -91,9 +88,11 @@ jobs:
 
       - id: build
         name: Build and Push Docker image to GCP Artifact Registry
+        env:
+          # Define REGISTRY_PATH at step level where both env and secrets are available
+          REGISTRY_PATH: "${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}"
         run: |
-          IMAGE_PATH="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME }}"
-
+          FULL_IMAGE_PATH="${REGISTRY_PATH}/${{ env.IMAGE_NAME }}"
           TAGS=("latest" "ci" "${GITHUB_SHA::7}")
 
           echo "Building Docker image: ${IMAGE_NAME}:latest"
@@ -102,12 +101,11 @@ jobs:
           echo "Tagging and pushing to GCP Artifact Registry..."
           for tag in "${TAGS[@]}"; do
             echo "Processing tag: ${tag}"
-            docker tag "${IMAGE_NAME}:latest" "${IMAGE_PATH}:${tag}"
-            docker push "${IMAGE_PATH}:${tag}"
+            docker tag "${IMAGE_NAME}:latest" "${FULL_IMAGE_PATH}:${tag}"
+            docker push "${FULL_IMAGE_PATH}:${tag}"
           done
 
-          echo "image-path=${IMAGE_PATH}" >> $GITHUB_OUTPUT
-          echo "Successfully pushed image to: ${IMAGE_PATH}"
+          echo "Successfully pushed image to: ${FULL_IMAGE_PATH}"
 
   ###############################################################################
   # Job 3: Train and Test (Parallel Execution)
@@ -137,20 +135,13 @@ jobs:
           gcp-region: ${{ env.GCP_REGION }}
 
       - name: Pull Docker image from GCP Artifact Registry
+        env:
+          # Define REGISTRY_PATH at step level
+          REGISTRY_PATH: "${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}"
         run: |
-          echo "Debug - Build job output: ${{ needs.build.outputs.image-path }}"
-          if [[ -z "${{ needs.build.outputs.image-path }}" ]]; then
-            echo "ERROR: image-path from build job is empty!"
-            # Fallback to constructing it ourselves
-            IMAGE_PATH="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME }}"
-            echo "Using fallback IMAGE_PATH: ${IMAGE_PATH}"
-          else
-            IMAGE_PATH="${{ needs.build.outputs.image-path }}"
-            echo "Using build job IMAGE_PATH: ${IMAGE_PATH}"
-          fi
-
-          echo "Pulling image: ${IMAGE_PATH}:latest"
-          docker pull "${IMAGE_PATH}:latest"
+          FULL_IMAGE_PATH="${REGISTRY_PATH}/${{ env.IMAGE_NAME }}"
+          echo "Pulling image: ${FULL_IMAGE_PATH}:latest"
+          docker pull "${FULL_IMAGE_PATH}:latest"
 
       # Set parameters for training based on branch
       - name: Set training parameters
@@ -158,14 +149,12 @@ jobs:
         id: params
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            # Full training on main branch
             echo "epochs=10" >> $GITHUB_OUTPUT
             echo "model=resnet18" >> $GITHUB_OUTPUT
             echo "Running on main branch - full training configuration"
           else
-            # Quick validation on develop/PR branches
             echo "epochs=1" >> $GITHUB_OUTPUT
-            echo "model=resnet10t" >> $GITHUB_OUTPUT  # Smaller, faster model
+            echo "model=resnet10t" >> $GITHUB_OUTPUT
             echo "Running on develop branch - quick validation configuration"
           fi
 
@@ -176,8 +165,10 @@ jobs:
           GDRIVE_CREDENTIALS_DATA_CONTENT: ${{ secrets.GDRIVE_SA_KEY_JSON_CONTENT }}
           # Weights & Biases API key for experiment tracking
           WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+          # Define REGISTRY_PATH at step level
+          REGISTRY_PATH: "${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}"
         run: |
-          IMAGE_PATH="${{ needs.build.outputs.image-path }}"
+          FULL_IMAGE_PATH="${REGISTRY_PATH}/${{ env.IMAGE_NAME }}"
 
           if [[ "${{ matrix.task }}" == "train" ]]; then
             echo "Starting training with ${{ steps.params.outputs.model }} for ${{ steps.params.outputs.epochs }} epochs..."
@@ -188,18 +179,16 @@ jobs:
               -e WANDB_API_KEY \
               -e CI_MODE=true \
               ${{ env.DOCKER_MEMORY_OPTS }} \
-              "${IMAGE_PATH}:latest" \
+              "${FULL_IMAGE_PATH}:latest" \
               make train ARGS="training.epochs=${{ steps.params.outputs.epochs }} model.name=${{ steps.params.outputs.model }} data.dataloader_workers=2 run.device=cpu cml.enabled=true"
           else
             echo "Running tests..."
-
-            # Run tests in Docker container
             docker run --rm \
               -v "$PWD:/app" \
               -e GDRIVE_CREDENTIALS_DATA_CONTENT \
               -e CI_MODE=true \
               ${{ env.DOCKER_MEMORY_OPTS }} \
-              "${IMAGE_PATH}:latest" \
+              "${FULL_IMAGE_PATH}:latest" \
               make test
           fi
 
@@ -214,18 +203,16 @@ jobs:
             cml_metrics.json
           retention-days: 1  # Short retention for CI artifacts
 
-      # Upload the best model to GCP bucket for persistence
+      # Upload the best model to GCP bucket for persistence (main branch only)
       - name: Upload model to GCP
-        if: matrix.task == 'train' && success()
+        if: matrix.task == 'train' && success() && github.ref == 'refs/heads/main'
         run: |
           MODEL_BUCKET="gs://team-zeal-models"
           MODEL_PATH="${MODEL_BUCKET}/${GITHUB_REF_NAME}/${GITHUB_SHA::7}_model.pth"
 
-          # Create bucket if it doesn't exist
           echo "Checking if model bucket exists..."
           gsutil ls $MODEL_BUCKET || gsutil mb -p ${{ secrets.GCP_PROJECT_ID }} -l ${{ env.GCP_REGION }} $MODEL_BUCKET
 
-          # Upload the trained model
-          echo "Uploading model to GCS..."
+          echo "Uploading production model to GCS..."
           gsutil cp best_model.pth $MODEL_PATH
           echo "Model uploaded to: $MODEL_PATH"
