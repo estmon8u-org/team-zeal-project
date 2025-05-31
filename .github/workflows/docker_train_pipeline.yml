@@ -173,6 +173,21 @@ jobs:
             cml_metrics.json
           retention-days: 1
 
+      # Upload the best model to GCP bucket
+      - name: Upload model to GCP
+        if: success()
+        run: |
+          GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
+          MODEL_BUCKET="gs://team-zeal-models"
+          MODEL_PATH="${MODEL_BUCKET}/ci-models/${GITHUB_SHA::7}_model.pth"
+
+          # Create bucket if it doesn't exist
+          gsutil ls $MODEL_BUCKET || gsutil mb -l ${GCP_REGION} $MODEL_BUCKET
+
+          # Upload model
+          gsutil cp best_model.pth $MODEL_PATH
+          echo "Model uploaded to: $MODEL_PATH"
+
   test:
     name: Run Tests
     needs: build
