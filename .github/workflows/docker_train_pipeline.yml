@@ -154,6 +154,15 @@ jobs:
       # In docker_train_pipeline.yml, train job
       - name: Run DVC pull + training in Docker
         run: |
+          # Set epochs based on branch
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            EPOCHS=10
+            echo "Running on main branch - using full $EPOCHS epochs"
+          else
+            EPOCHS=1
+            echo "Running on develop or other branch - using reduced $EPOCHS epochs"
+          fi
+
           docker run --rm \
             -v "$PWD:/app" \
             -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
@@ -161,7 +170,7 @@ jobs:
             -e CI_MODE=true \
             $DOCKER_MEMORY_OPTS \
             "${registry_image_path}:latest" \
-            make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu cml.enabled=true"
+            make train HYDRA_ARGS="training.epochs=$EPOCHS data.dataloader_workers=2 run.device=cpu cml.enabled=true"
 
       # Add this after training completes
       - name: Upload training metrics and plots for CML
