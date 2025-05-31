@@ -38,27 +38,24 @@ jobs:
       - name: Install Ruff
         run: python -m pip install ruff
 
-      - name: Run Ruff Formatter Check
+      - name: Run Ruff Check
         run: ruff format --check .
 
       - name: Run Ruff Linter
         run: ruff check .
 
-  build_push_train_test:
-    name: Build, Push Docker & Train/Test
+  build:
+    name: Build Docker Image
     needs: lint
     runs-on:
       group: default
       labels: ubuntu-latest-m
-    timeout-minutes: 120
+    timeout-minutes: 60
     env:
+      LOCAL_IMAGE_NAME: team-zeal-project
       GCP_REGION: us-central1
       ARTIFACT_REGISTRY_REPO: team-zeal-project
       IMAGE_NAME_IN_REGISTRY: team-zeal-project
-      SA_KEY_DVC: ${{ secrets.GDRIVE_SA_KEY_JSON_CONTENT }}
-      WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
-      DOCKER_MEMORY_OPTS: "--memory=8g --memory-swap=8g --shm-size=4g"
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,52 +77,137 @@ jobs:
 
       - name: Build and Push Docker image to GCP Artifact Registry
         run: |
-          GCP_PROJECT_ID_FROM_SECRET='${{ secrets.GCP_PROJECT_ID }}'
-          IMAGE_PATH_PREFIX="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID_FROM_SECRET}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}"
+          GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
+          IMAGE_PATH_PREFIX="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}"
 
-          # Tag with 'ci' and Git SHA
+          # Tag with 'latest', 'ci' and Git SHA
+          TAG_LATEST="latest"
           TAG_CI="ci"
           TAG_SHA="${GITHUB_SHA::7}" # Short SHA
 
-          echo "Building image: ${IMAGE_PATH_PREFIX}"
-          docker build -t "${IMAGE_PATH_PREFIX}:${TAG_CI}" -t "${IMAGE_PATH_PREFIX}:${TAG_SHA}" .
+          echo "Building image: ${LOCAL_IMAGE_NAME}:${TAG_LATEST}"
+          docker build -t "${LOCAL_IMAGE_NAME}:${TAG_LATEST}" .
 
-          echo "Pushing image: ${IMAGE_PATH_PREFIX}:${TAG_CI}"
+          # Tag for GCP Registry
+          docker tag "${LOCAL_IMAGE_NAME}:${TAG_LATEST}" "${IMAGE_PATH_PREFIX}:${TAG_LATEST}"
+          docker tag "${LOCAL_IMAGE_NAME}:${TAG_LATEST}" "${IMAGE_PATH_PREFIX}:${TAG_CI}"
+          docker tag "${LOCAL_IMAGE_NAME}:${TAG_LATEST}" "${IMAGE_PATH_PREFIX}:${TAG_SHA}"
+
+          echo "Pushing images to GCP Artifact Registry"
+          docker push "${IMAGE_PATH_PREFIX}:${TAG_LATEST}"
           docker push "${IMAGE_PATH_PREFIX}:${TAG_CI}"
-
-          echo "Pushing image: ${IMAGE_PATH_PREFIX}:${TAG_SHA}"
           docker push "${IMAGE_PATH_PREFIX}:${TAG_SHA}"
-        env:
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+          # Save registry image path as output variable for later jobs
+          echo "registry_image_path=${IMAGE_PATH_PREFIX}" >> $GITHUB_ENV
+
+      # Export image as tar file to share between jobs (keeping for compatibility)
+      - name: Export Docker image
+        run: docker save $LOCAL_IMAGE_NAME:latest > /tmp/image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/image.tar
+          retention-days: 1
+
+  train:
+    name: Run Training
+    needs: build
+    runs-on:
+      group: default
+      labels: ubuntu-latest-m
+    timeout-minutes: 120
+    env:
+      GCP_REGION: us-central1
+      ARTIFACT_REGISTRY_REPO: team-zeal-project
+      IMAGE_NAME_IN_REGISTRY: team-zeal-project
+      SA_KEY: ${{ secrets.GDRIVE_SA_KEY_JSON_CONTENT }}
+      WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+      DOCKER_MEMORY_OPTS: "--memory=8g --memory-swap=8g --shm-size=4g"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Authenticate to Google Cloud
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # Configure Docker to use gcloud as a credential helper
+      - name: Configure Docker for GCP Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Pull Docker image from GCP Artifact Registry
+        run: |
+          GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
+          IMAGE_PATH="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}:latest"
+
+          echo "Pulling image: ${IMAGE_PATH}"
+          docker pull "${IMAGE_PATH}"
+          echo "registry_image_path=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}" >> $GITHUB_ENV
 
       - name: Run DVC pull + training in Docker
         run: |
-          # Use the locally built tag for this step
-          LOCAL_IMAGE_TAG="ci"
-          IMAGE_PATH_PREFIX_LOCAL="${GCP_REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}"
-          FULL_IMAGE_NAME_FOR_RUN="${IMAGE_PATH_PREFIX_LOCAL}:${LOCAL_IMAGE_TAG}"
-
-          echo "Running DVC pull + training in Docker using image: $FULL_IMAGE_NAME_FOR_RUN"
+          echo "Running training with image: ${registry_image_path}:latest"
           docker run --rm \
             -v "$PWD:/app" \
-            -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY_DVC" \
+            -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
             -e WANDB_API_KEY="$WANDB_API_KEY" \
             -e CI_MODE=true \
             $DOCKER_MEMORY_OPTS \
-            "${IMAGE_PATH_PREFIX_LOCAL}:${LOCAL_IMAGE_TAG}" \
+            "${registry_image_path}:latest" \
             make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu"
+
+  test:
+    name: Run Tests
+    needs: build
+    runs-on:
+      group: default
+      labels: ubuntu-latest-m
+    timeout-minutes: 60
+    env:
+      GCP_REGION: us-central1
+      ARTIFACT_REGISTRY_REPO: team-zeal-project
+      IMAGE_NAME_IN_REGISTRY: team-zeal-project
+      SA_KEY: ${{ secrets.GDRIVE_SA_KEY_JSON_CONTENT }}
+      DOCKER_MEMORY_OPTS: "--memory=8g --memory-swap=8g --shm-size=4g"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Authenticate to Google Cloud
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # Configure Docker to use gcloud as a credential helper
+      - name: Configure Docker for GCP Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Pull Docker image from GCP Artifact Registry
+        run: |
+          GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
+          IMAGE_PATH="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}:latest"
+
+          echo "Pulling image: ${IMAGE_PATH}"
+          docker pull "${IMAGE_PATH}"
+          echo "registry_image_path=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}" >> $GITHUB_ENV
 
       - name: Run tests in Docker
         run: |
-          LOCAL_IMAGE_TAG="ci"
-          IMAGE_PATH_PREFIX_LOCAL="${GCP_REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}"
-          FULL_IMAGE_NAME_FOR_RUN="${IMAGE_PATH_PREFIX_LOCAL}:${LOCAL_IMAGE_TAG}"
-
-          echo "Running tests in Docker using image: $FULL_IMAGE_NAME_FOR_RUN"
+          echo "Running tests with image: ${registry_image_path}:latest"
           docker run --rm \
             -v "$PWD:/app" \
-            -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY_DVC" \
+            -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
             -e CI_MODE=true \
             $DOCKER_MEMORY_OPTS \
-            "${IMAGE_PATH_PREFIX_LOCAL}:${LOCAL_IMAGE_TAG}" \
+            "${registry_image_path}:latest" \
             make test
