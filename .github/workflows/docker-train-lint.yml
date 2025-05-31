@@ -24,7 +24,7 @@ on:
 # Global environment variables to reduce duplication
 env:
   # GCP Configuration
-  GCP_REGION: us-central1
+  GCP_REGION: us-west2
   ARTIFACT_REGISTRY_REPO: team-zeal-project
   IMAGE_NAME: team-zeal-project
   # Docker resource limits for consistent container execution

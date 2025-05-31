@@ -13,7 +13,7 @@ inputs:
   gcp-region:
     description: 'GCP Region for Artifact Registry'
     required: false
-    default: 'us-central1'
+    default: 'us-west2'
 
 runs:
   using: "composite"
