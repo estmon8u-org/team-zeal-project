@@ -75,3 +75,6 @@ client_secret.json
 build/
 dist/
 *.wheel
+
+# Test specific folder
+dummy/

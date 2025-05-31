@@ -207,3 +207,6 @@ outputs/
 
 # Pytorch Profiler output
 pytorch_profiler_logs
+
+# Test specific folder
+dummy/
