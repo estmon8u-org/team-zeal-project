@@ -203,9 +203,9 @@ jobs:
             cml_metrics.json
           retention-days: 1  # Short retention for CI artifacts
 
-      # Upload the best model to GCP bucket for persistence (main branch only)
+      # Upload the best model to GCP bucket for persistence
       - name: Upload model to GCP
-        if: matrix.task == 'train' && success() && github.ref == 'refs/heads/main'
+        if: matrix.task == 'train' && success()
         run: |
           MODEL_BUCKET="gs://team-zeal-models"
           MODEL_PATH="${MODEL_BUCKET}/${GITHUB_REF_NAME}/${GITHUB_SHA::7}_model.pth"
