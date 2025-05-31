@@ -152,15 +152,19 @@ jobs:
           echo "registry_image_path=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}" >> $GITHUB_ENV
 
       # In docker_train_pipeline.yml, train job
+      # Depending on the branch, set different training parameters
+      # and run the training command inside the Docker container
       - name: Run DVC pull + training in Docker
         run: |
-          # Set epochs based on branch
+          # Set parameters based on branch
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             EPOCHS=10
-            echo "Running on main branch - using full $EPOCHS epochs"
+            MODEL="resnet18"
+            echo "Running on main branch - using $MODEL with $EPOCHS epochs"
           else
-            EPOCHS=1
-            echo "Running on develop or other branch - using reduced $EPOCHS epochs"
+            EPOCHS=2
+            MODEL="resnet10t"
+            echo "Running on develop branch - using $MODEL with $EPOCHS epochs"
           fi
 
           docker run --rm \
@@ -170,10 +174,11 @@ jobs:
             -e CI_MODE=true \
             $DOCKER_MEMORY_OPTS \
             "${registry_image_path}:latest" \
-            make train HYDRA_ARGS="training.epochs=$EPOCHS data.dataloader_workers=2 run.device=cpu cml.enabled=true"
+            make train ARGS="training.epochs=$EPOCHS model.name=$MODEL data.dataloader_workers=2 run.device=cpu cml.enabled=true"
 
-      # Add this after training completes
       - name: Upload training metrics and plots for CML
+        # For develop branch, upload only if explicitly needed
+        if: success() && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request')
         uses: actions/upload-artifact@v4
         with:
           name: cml-artifacts
@@ -184,7 +189,7 @@ jobs:
 
       # Upload the best model to GCP bucket
       - name: Upload model to GCP
-        if: success()
+        if: success() && github.ref == 'refs/heads/main'
         run: |
           GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
           MODEL_BUCKET="gs://team-zeal-models"

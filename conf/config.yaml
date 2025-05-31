@@ -9,6 +9,7 @@ data:
 
 # --- Model Parameters ---
 model:
+  # Available models: https://timm.fast.ai/?utm_source=chatgpt.com#List-Models-with-Pretrained-Weights
   name: "resnet18"       # Name of the model from timm
   pretrained: True       # Load ImageNet pre-trained weights
   num_classes: 10        # Number of classes in Imagenette
