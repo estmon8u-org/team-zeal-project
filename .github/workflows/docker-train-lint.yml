@@ -138,9 +138,9 @@ jobs:
 
       - name: Pull Docker image from GCP Artifact Registry
         run: |
-          IMAGE_PATH="${{ needs.build.outputs.image-path }}:latest"
+          IMAGE_PATH="${{ needs.build.outputs.image-path }}"
           echo "Pulling image: ${IMAGE_PATH}"
-          docker pull "${IMAGE_PATH}"
+          docker pull "${IMAGE_PATH}:latest"
 
       # Set parameters for training based on branch
       - name: Set training parameters
@@ -167,7 +167,7 @@ jobs:
           # Weights & Biases API key for experiment tracking
           WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
         run: |
-          IMAGE_PATH="${{ needs.build.outputs.image-path }}:latest"
+          IMAGE_PATH="${{ needs.build.outputs.image-path }}"
 
           if [[ "${{ matrix.task }}" == "train" ]]; then
             echo "Starting training with ${{ steps.params.outputs.model }} for ${{ steps.params.outputs.epochs }} epochs..."
@@ -178,7 +178,7 @@ jobs:
               -e WANDB_API_KEY \
               -e CI_MODE=true \
               ${{ env.DOCKER_MEMORY_OPTS }} \
-              "${IMAGE_PATH}" \
+              "${IMAGE_PATH}:latest" \
               make train ARGS="training.epochs=${{ steps.params.outputs.epochs }} model.name=${{ steps.params.outputs.model }} data.dataloader_workers=2 run.device=cpu cml.enabled=true"
           else
             echo "Running tests..."
@@ -189,7 +189,7 @@ jobs:
               -e GDRIVE_CREDENTIALS_DATA_CONTENT \
               -e CI_MODE=true \
               ${{ env.DOCKER_MEMORY_OPTS }} \
-              "${IMAGE_PATH}" \
+              "${IMAGE_PATH}:latest" \
               make test
           fi
 
