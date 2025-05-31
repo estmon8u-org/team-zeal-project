@@ -16,11 +16,10 @@ repos:
     -   id: check-case-conflict
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version. Keep in sync with your workflow configurations
-    rev: v0.5.0
+    rev: v0.11.8  # Match your requirements.txt
     hooks:
     -   id: ruff
-        args: [--fix, --exit-non-zero-on-fix]  # Auto-fix and fail if fixes were made
+        args: [--fix, --exit-non-zero-on-fix]
         types: [python]
     -   id: ruff-format
         types: [python]
@@ -31,7 +30,7 @@ repos:
     hooks:
     -   id: nbqa-ruff
         args: [--fix]
-        additional_dependencies: [ruff==0.5.0]
+        additional_dependencies: [ruff==0.11.8]
 
 -   repo: https://github.com/kynan/nbstripout
     rev: 0.7.1

@@ -38,11 +38,11 @@ jobs:
       - name: Install Ruff
         run: python -m pip install ruff # Install ruff
 
-      - name: Run Ruff Formatter Check
-        run: ruff format --check .
+      - name: Run Ruff Formatter
+        run: ruff format .  # Actually format, not just check
 
       - name: Run Ruff Linter
-        run: ruff check .
+        run: ruff check --fix .  # Apply fixes like local tools
 
   build_and_train: # Your existing job, now dependent on 'lint'
     name: Build Docker and Train/Test

@@ -222,7 +222,7 @@ lint:
 .PHONY: format
 format:
 	$(PYTHON_INTERPRETER) -m ruff format .
-	$(PYTHON_INTERPRETER) -m ruff check --fix --exit-zero
+	$(PYTHON_INTERPRETER) -m ruff check --fix .
 
 ## Run unit tests. Pass pytest args via ARGS="..."
 .PHONY: test
