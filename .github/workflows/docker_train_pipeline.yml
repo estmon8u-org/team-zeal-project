@@ -80,12 +80,12 @@ jobs:
             -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
             -e WANDB_API_KEY="$WANDB_API_KEY" \
             -e CI_MODE=true \
-            ${{ env.DOCKER_MEMORY_OPTS_ENV_VAR_NAME }} \ # Get memory opts from env var
+            ${{ env.DOCKER_MEMORY_OPTS_ENV_VAR_NAME }} \
             $FULL_IMAGE_NAME_WITH_TAG \
             make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu"
         env:
             # Define Docker memory options as an environment variable for easier management
-            DOCKER_MEMORY_OPTS_ENV_VAR_NAME: "--memory=8g --memory-swap=8g --shm-size=4g" # Adjust if needed for CI runner
+            DOCKER_MEMORY_OPTS_ENV_VAR_NAME: "--memory=8g --memory-swap=8g --shm-size=4g"
 
       - name: Run tests in Docker
         run: |
@@ -93,13 +93,13 @@ jobs:
           echo "Running container from image: $FULL_IMAGE_NAME_WITH_TAG"
           docker run --rm \
             -v "$PWD:/app" \
-            -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \ # If tests need DVC data
+            -e GDRIVE_CREDENTIALS_DATA_CONTENT="$SA_KEY" \
             -e CI_MODE=true \
-            ${{ env.DOCKER_MEMORY_OPTS_ENV_VAR_NAME }} \ # Use same memory opts
+            ${{ env.DOCKER_MEMORY_OPTS_ENV_VAR_NAME }} \
             $FULL_IMAGE_NAME_WITH_TAG \
             make test
         env:
-            DOCKER_MEMORY_OPTS_ENV_VAR_NAME: "--memory=8g --memory-swap=8g --shm-size=4g" # Adjust if needed
+            DOCKER_MEMORY_OPTS_ENV_VAR_NAME: "--memory=8g --memory-swap=8g --shm-size=4g"
 
       # - name: Archive DVC metrics (Keep if you use it)
       #   uses: actions/upload-artifact@v3
