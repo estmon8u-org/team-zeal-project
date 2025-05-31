@@ -162,7 +162,7 @@ jobs:
             MODEL="resnet18"
             echo "Running on main branch - using $MODEL with $EPOCHS epochs"
           else
-            EPOCHS=2
+            EPOCHS=1
             MODEL="resnet10t"
             echo "Running on develop branch - using $MODEL with $EPOCHS epochs"
           fi
@@ -177,6 +177,8 @@ jobs:
             make train ARGS="training.epochs=$EPOCHS model.name=$MODEL data.dataloader_workers=2 run.device=cpu cml.enabled=true"
 
       - name: Upload training metrics and plots for CML
+        # For develop branch, upload only if explicitly needed
+        # if: success() && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request')
         uses: actions/upload-artifact@v4
         with:
           name: cml-artifacts
@@ -185,17 +187,20 @@ jobs:
             cml_metrics.json
           retention-days: 1
 
+      - name: Setup gcloud for Storage operations
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
       # Upload the best model to GCP bucket
       - name: Upload model to GCP
+        # if: success() && github.ref == 'refs/heads/main'
         run: |
           GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
           MODEL_BUCKET="gs://team-zeal-models"
           MODEL_PATH="${MODEL_BUCKET}/ci-models/${GITHUB_SHA::7}_model.pth"
-
-          # Create bucket if it doesn't exist
-          gsutil ls $MODEL_BUCKET || gsutil mb -l ${GCP_REGION} $MODEL_BUCKET
-
-          # Upload model
+          gsutil ls $MODEL_BUCKET || gsutil mb -p $GCP_PROJECT_ID -l ${GCP_REGION} $MODEL_BUCKET
           gsutil cp best_model.pth $MODEL_PATH
           echo "Model uploaded to: $MODEL_PATH"
 
@@ -232,7 +237,6 @@ jobs:
         run: |
           GCP_PROJECT_ID='${{ secrets.GCP_PROJECT_ID }}'
           IMAGE_PATH="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}:latest"
-
           echo "Pulling image: ${IMAGE_PATH}"
           docker pull "${IMAGE_PATH}"
           echo "registry_image_path=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${IMAGE_NAME_IN_REGISTRY}" >> $GITHUB_ENV
