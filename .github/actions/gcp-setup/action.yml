@@ -1,0 +1,37 @@
+###############################################################################
+# Composite Action: GCP Setup and Docker Configuration
+# Purpose: Reusable action to authenticate to GCP and configure Docker
+# Used by: docker-train-lint workflow (build, train-and-test jobs)
+###############################################################################
+
+name: 'GCP Setup'
+description: 'Authenticate to Google Cloud and configure Docker for Artifact Registry'
+inputs:
+  gcp-sa-key:
+    description: 'GCP Service Account Key JSON'
+    required: true
+  gcp-region:
+    description: 'GCP Region for Artifact Registry'
+    required: false
+    default: 'us-central1'
+
+runs:
+  using: "composite"
+  steps:
+    # Authenticate to Google Cloud using Service Account
+    - id: 'auth'
+      name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: ${{ inputs.gcp-sa-key }}
+
+    # Configure gcloud CLI
+    - name: Setup gcloud CLI
+      uses: 'google-github-actions/setup-gcloud@v2'
+
+    # Configure Docker to use gcloud as a credential helper for Artifact Registry
+    - name: Configure Docker for GCP Artifact Registry
+      shell: bash
+      run: |
+        echo "Configuring Docker for ${{ inputs.gcp-region }}-docker.pkg.dev"
+        gcloud auth configure-docker ${{ inputs.gcp-region }}-docker.pkg.dev --quiet
