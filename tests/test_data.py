@@ -79,9 +79,9 @@ def test_get_transforms_returns_tuple(mock_cfg):
     """
     train_tfm, val_tfm = get_transforms(mock_cfg)
     assert isinstance(train_tfm, transforms.Compose), "Train transform should be a Compose object."
-    assert isinstance(val_tfm, transforms.Compose), (
-        "Validation transform should be a Compose object."
-    )
+    assert isinstance(
+        val_tfm, transforms.Compose
+    ), "Validation transform should be a Compose object."
 
 
 def test_get_transforms_validation_structure(mock_cfg):
@@ -94,18 +94,19 @@ def test_get_transforms_validation_structure(mock_cfg):
     assert len(val_tfm.transforms) >= 4, "Validation transform should have at least 4 steps."
     assert isinstance(val_tfm.transforms[0], transforms.Resize), "First val step should be Resize."
     assert val_tfm.transforms[0].size == 256, "Validation Resize should be to 256."
-    assert isinstance(val_tfm.transforms[1], transforms.CenterCrop), (
-        "Second val step should be CenterCrop."
-    )
-    assert val_tfm.transforms[1].size == (mock_cfg.data.img_size, mock_cfg.data.img_size), (
-        "Val CenterCrop size mismatch."
-    )
-    assert isinstance(val_tfm.transforms[2], transforms.ToTensor), (
-        "Third val step should be ToTensor."
-    )
-    assert isinstance(val_tfm.transforms[3], transforms.Normalize), (
-        "Fourth val step should be Normalize."
-    )
+    assert isinstance(
+        val_tfm.transforms[1], transforms.CenterCrop
+    ), "Second val step should be CenterCrop."
+    assert val_tfm.transforms[1].size == (
+        mock_cfg.data.img_size,
+        mock_cfg.data.img_size,
+    ), "Val CenterCrop size mismatch."
+    assert isinstance(
+        val_tfm.transforms[2], transforms.ToTensor
+    ), "Third val step should be ToTensor."
+    assert isinstance(
+        val_tfm.transforms[3], transforms.Normalize
+    ), "Fourth val step should be Normalize."
 
 
 def test_get_transforms_train_structure(mock_cfg):
@@ -116,21 +117,22 @@ def test_get_transforms_train_structure(mock_cfg):
     train_tfm, _ = get_transforms(mock_cfg)
     # Expecting RandomResizedCrop, RandomHorizontalFlip, ToTensor, Normalize
     assert len(train_tfm.transforms) >= 4, "Train transform should have at least 4 steps."
-    assert isinstance(train_tfm.transforms[0], transforms.RandomResizedCrop), (
-        "First train step should be RandomResizedCrop."
-    )
-    assert train_tfm.transforms[0].size == (mock_cfg.data.img_size, mock_cfg.data.img_size), (
-        "Train RandomResizedCrop size mismatch."
-    )
-    assert isinstance(train_tfm.transforms[1], transforms.RandomHorizontalFlip), (
-        "Second train step should be RandomHorizontalFlip."
-    )
-    assert isinstance(train_tfm.transforms[2], transforms.ToTensor), (
-        "Third train step should be ToTensor."
-    )
-    assert isinstance(train_tfm.transforms[3], transforms.Normalize), (
-        "Fourth train step should be Normalize."
-    )
+    assert isinstance(
+        train_tfm.transforms[0], transforms.RandomResizedCrop
+    ), "First train step should be RandomResizedCrop."
+    assert train_tfm.transforms[0].size == (
+        mock_cfg.data.img_size,
+        mock_cfg.data.img_size,
+    ), "Train RandomResizedCrop size mismatch."
+    assert isinstance(
+        train_tfm.transforms[1], transforms.RandomHorizontalFlip
+    ), "Second train step should be RandomHorizontalFlip."
+    assert isinstance(
+        train_tfm.transforms[2], transforms.ToTensor
+    ), "Third train step should be ToTensor."
+    assert isinstance(
+        train_tfm.transforms[3], transforms.Normalize
+    ), "Fourth train step should be Normalize."
 
 
 # --- Tests for extract_data control flow ---
@@ -384,9 +386,7 @@ def test_extract_data_exits_if_pull_fails(
     found_call = any(
         call_args[0][0] == expected_log for call_args in mock_log.error.call_args_list
     )
-    assert found_call, (
-        f"Expected log call not found.\nExpected:\n{expected_log}\nActual calls:\n{[c[0][0] for c in mock_log.error.call_args_list]}"
-    )
+    assert found_call, f"Expected log call not found.\nExpected:\n{expected_log}\nActual calls:\n{[c[0][0] for c in mock_log.error.call_args_list]}"
     mock_sys_exit.assert_called_once()  # Verify sys.exit was indeed called
 
 
@@ -432,9 +432,7 @@ def test_extract_data_handles_tarfile_read_error(
     found_call = any(
         call_args[0][0] == expected_log for call_args in mock_log.error.call_args_list
     )
-    assert found_call, (
-        f"Expected log call not found.\nExpected:\n{expected_log}\nActual calls:\n{[c[0][0] for c in mock_log.error.call_args_list]}"
-    )
+    assert found_call, f"Expected log call not found.\nExpected:\n{expected_log}\nActual calls:\n{[c[0][0] for c in mock_log.error.call_args_list]}"
     mock_sys_exit.assert_called_once()
 
 
@@ -457,12 +455,16 @@ def test_transform_dimensions(mock_cfg):
 
     # Check dimensions (C, H, W after ToTensor)
     expected_size = mock_cfg.data.img_size
-    assert transformed_train.shape == (3, expected_size, expected_size), (
-        "Train transform output dimension mismatch."
-    )
-    assert transformed_val.shape == (3, expected_size, expected_size), (
-        "Validation transform output dimension mismatch."
-    )
+    assert transformed_train.shape == (
+        3,
+        expected_size,
+        expected_size,
+    ), "Train transform output dimension mismatch."
+    assert transformed_val.shape == (
+        3,
+        expected_size,
+        expected_size,
+    ), "Validation transform output dimension mismatch."
 
 
 def test_transform_normalization(mock_cfg):
@@ -485,22 +487,22 @@ def test_transform_normalization(mock_cfg):
     ref_tensor_before_norm = transforms.ToTensor()(mock_pil_img_norm)
 
     # Assert that normalization changed the values from the [0,1] range of ToTensor
-    assert not torch.allclose(transformed_val, ref_tensor_before_norm, atol=1e-5), (
-        "Validation transform did not significantly alter image values after ToTensor (normalization likely failed or was trivial)."
-    )
+    assert not torch.allclose(
+        transformed_val, ref_tensor_before_norm, atol=1e-5
+    ), "Validation transform did not significantly alter image values after ToTensor (normalization likely failed or was trivial)."
     # Assert values are within a plausible range for ImageNet normalization
-    assert transformed_val.min() >= -3.0 and transformed_val.max() <= 3.0, (
-        "Normalized validation values out of typical ImageNet range."
-    )
+    assert (
+        transformed_val.min() >= -3.0 and transformed_val.max() <= 3.0
+    ), "Normalized validation values out of typical ImageNet range."
 
     # Train transform includes random cropping, so direct comparison is harder,
     # but values should still be normalized.
-    assert not torch.allclose(transformed_train, ref_tensor_before_norm, atol=1e-5), (
-        "Train transform did not significantly alter image values after ToTensor (normalization likely failed or was trivial)."
-    )
-    assert transformed_train.min() >= -3.0 and transformed_train.max() <= 3.0, (
-        "Normalized training values out of typical ImageNet range."
-    )
+    assert not torch.allclose(
+        transformed_train, ref_tensor_before_norm, atol=1e-5
+    ), "Train transform did not significantly alter image values after ToTensor (normalization likely failed or was trivial)."
+    assert (
+        transformed_train.min() >= -3.0 and transformed_train.max() <= 3.0
+    ), "Normalized training values out of typical ImageNet range."
 
 
 # --- Additional tests for configuration handling ---
@@ -518,20 +520,24 @@ def test_transform_respects_img_size_config():
     train_tfm_160, val_tfm_160 = get_transforms(cfg_160)
 
     # Check CenterCrop size in validation transforms
-    assert val_tfm_224.transforms[1].size == (224, 224), (
-        "Validation CenterCrop should use img_size=224."
-    )
-    assert val_tfm_160.transforms[1].size == (160, 160), (
-        "Validation CenterCrop should use img_size=160."
-    )
+    assert val_tfm_224.transforms[1].size == (
+        224,
+        224,
+    ), "Validation CenterCrop should use img_size=224."
+    assert val_tfm_160.transforms[1].size == (
+        160,
+        160,
+    ), "Validation CenterCrop should use img_size=160."
 
     # Check RandomResizedCrop size in training transforms
-    assert train_tfm_224.transforms[0].size == (224, 224), (
-        "Train RandomResizedCrop should use img_size=224."
-    )
-    assert train_tfm_160.transforms[0].size == (160, 160), (
-        "Train RandomResizedCrop should use img_size=160."
-    )
+    assert train_tfm_224.transforms[0].size == (
+        224,
+        224,
+    ), "Train RandomResizedCrop should use img_size=224."
+    assert train_tfm_160.transforms[0].size == (
+        160,
+        160,
+    ), "Train RandomResizedCrop should use img_size=160."
 
 
 # --- Tests for get_dataloaders ---

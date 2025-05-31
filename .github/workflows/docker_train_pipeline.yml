@@ -70,7 +70,7 @@ jobs:
             -e CI_MODE=true \
             $FULL_IMAGE_NAME_WITH_TAG \
             make train HYDRA_ARGS="training.epochs=3 data.dataloader_workers=2 run.device=cpu"
-      
+
       #########################################################################
       # 5. Run tests inside the image
       #########################################################################

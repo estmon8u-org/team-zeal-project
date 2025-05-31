@@ -7,4 +7,3 @@ MLOps pipeline for image classification on Imagenette-160, featuring automated d
 ## Commands
 
 The Makefile contains the central entry points for common tasks related to this project.
-

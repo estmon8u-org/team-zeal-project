@@ -1,0 +1,39 @@
+# Pre-commit configuration
+# For more information, see https://pre-commit.com
+
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0  # Use the latest version
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files  # Important for not committing large model/data files accidentally
+        args: ['--maxkb=10240']  # Max 10MB, adjust as needed
+    -   id: check-toml
+    -   id: check-merge-conflict
+    -   id: debug-statements
+    -   id: check-case-conflict
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version. Keep in sync with your workflow configurations
+    rev: v0.5.0
+    hooks:
+    -   id: ruff
+        args: [--fix, --exit-non-zero-on-fix]  # Auto-fix and fail if fixes were made
+        types: [python]
+    -   id: ruff-format
+        types: [python]
+
+# Consider adding these additional hooks based on your project needs
+-   repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.8.4
+    hooks:
+    -   id: nbqa-ruff
+        args: [--fix]
+        additional_dependencies: [ruff==0.5.0]
+
+-   repo: https://github.com/kynan/nbstripout
+    rev: 0.7.1
+    hooks:
+    -   id: nbstripout  # Strips output from Jupyter notebooks
