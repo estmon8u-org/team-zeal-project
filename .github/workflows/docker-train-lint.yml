@@ -283,7 +283,7 @@ jobs:
           # Post the report as a comment
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             echo " Posting report to PR #${{ github.event.pull_request.number }}"
-            cml comment create report.md --target-pull-request ${{ github.event.pull_request.number }}
+            cml comment create report.md --target pr/${{ github.event.pull_request.number }}
           else
             echo " Posting report to commit ${{ github.sha }}"
             cml comment create report.md
