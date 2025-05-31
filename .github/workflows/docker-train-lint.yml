@@ -207,7 +207,7 @@ jobs:
       # Setup CML for report generation (moved from separate workflow)
       - name: Setup CML
         if: matrix.task == 'train' && success()
-        uses: iterative/setup-cml@v1
+        uses: iterative/setup-cml@v2
 
       # Generate and post CML report (integrated from cml-report.yml)
       - name: Generate and Post CML Report
@@ -256,8 +256,8 @@ jobs:
 
             if [ -f "$plot_file" ]; then
               echo "#### $plot_title" >> report.md
-              # CML publishes the image and returns markdown reference
-              cml-publish "$plot_file" --md >> report.md
+              # Use inline image syntax instead of cml-publish
+              echo "![inline]($plot_file)" >> report.md
             else
               echo "**$plot_title** plot not found at \`$plot_file\`" >> report.md
             fi
