@@ -50,7 +50,7 @@ jobs:
     runs-on:
       group: default
       labels: ubuntu-latest-m
-    timeout-minutes: 60
+    timeout-minutes: 30
     env:
       LOCAL_IMAGE_NAME: team-zeal-project
       GCP_REGION: us-central1
@@ -118,7 +118,7 @@ jobs:
     runs-on:
       group: default
       labels: ubuntu-latest-m
-    timeout-minutes: 120
+    timeout-minutes: 240
     env:
       GCP_REGION: us-central1
       ARTIFACT_REGISTRY_REPO: team-zeal-project
@@ -203,7 +203,7 @@ jobs:
     runs-on:
       group: default
       labels: ubuntu-latest-m
-    timeout-minutes: 60
+    timeout-minutes: 30
     env:
       GCP_REGION: us-central1
       ARTIFACT_REGISTRY_REPO: team-zeal-project
