@@ -215,21 +215,93 @@ docker_cml_train: ensure_host_dvc_cache check_service_account_key docker_build
 		-e CI_MODE=$(CI_MODE) \
 		$(DOCKER_MEMORY_OPTS) $(FULL_IMAGE_NAME) make train ARGS="cml.enabled=true $(ARGS)"
 
-## Build API Docker image
-.PHONY: api_docker_build
-api_docker_build:
-	docker build -t team-zeal-api:latest -f api/Dockerfile ./api
+# API Docker Image (for Cloud Functions/Run Deployment)
+# -----------------------------------------------------------------------------
+API_IMAGE_NAME	:= $(PROJECT_NAME)-api
+API_IMAGE_TAG	:= latest # Or use a git commit SHA for better versioning in CI
+SERVICE_NAME	:= team-zeal-api-run # Name for Cloud Run service
+# For local pushes, try to get GCP Project ID and Region from gcloud config
+# These can be overridden: make api_docker_push_gcp GCP_PROJECT_ID_LOCAL=my-gcp-project GCP_REGION_LOCAL=us-central1
+GCP_PROJECT_ID_LOCAL	?= $(shell gcloud config get-value project 2>/dev/null)
+GCP_REGION_LOCAL	?= us-west2
 
-## Create API Dockerfile
-api/Dockerfile:
-	@echo "FROM python:3.10-slim" > api/Dockerfile
-	@echo "WORKDIR /app" >> api/Dockerfile
-	@echo "COPY requirements.txt ." >> api/Dockerfile
-	@echo "RUN pip install --no-cache-dir -r requirements.txt" >> api/Dockerfile
-	@echo "COPY . ." >> api/Dockerfile
-	@echo "CMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8008\"]" >> api/Dockerfile
-	@echo "Created api/Dockerfile"
+# Use the same ARTIFACT_REGISTRY_REPO name as in your CI for consistency, or define a new one
+API_ARTIFACT_REGISTRY_REPO := team-zeal-project
 
+# Construct the full Artifact Registry path
+# Example: us-west2-docker.pkg.dev/your-gcp-project-id/team-zeal-project/team-zeal-project-api:latest
+API_FULL_REGISTRY_PATH := $(GCP_REGION_LOCAL)-docker.pkg.dev/$(GCP_PROJECT_ID_LOCAL)/$(API_ARTIFACT_REGISTRY_REPO)/$(API_IMAGE_NAME)
+API_FULL_IMAGE_NAME_WITH_TAG := $(API_FULL_REGISTRY_PATH):$(API_IMAGE_TAG)
+
+## Build API Docker image for GCP deployment
+.PHONY: api_docker_build_gcp
+api_docker_build_gcp:
+	@echo "Building API Docker image for GCP: $(API_IMAGE_NAME):$(API_IMAGE_TAG)"
+	@echo "Using Dockerfile: api/Dockerfile, Context: ./api"
+	docker build -t $(API_IMAGE_NAME):$(API_IMAGE_TAG) -f api/Dockerfile ./api
+	@echo "API Docker image built: $(API_IMAGE_NAME):$(API_IMAGE_TAG)"
+	@echo "To push to GCP Artifact Registry, run: make api_docker_push_gcp"
+
+## Tag and Push API Docker image to GCP Artifact Registry
+.PHONY: api_docker_push_gcp
+api_docker_push_gcp: api_docker_build_gcp
+ifndef GCP_PROJECT_ID_LOCAL
+	@echo "ERROR: GCP_PROJECT_ID_LOCAL could not be determined. Run 'gcloud config set project YOUR_PROJECT_ID' or set it via env var."
+	@exit 1
+endif
+	@echo "GCP Project ID for push: $(GCP_PROJECT_ID_LOCAL)"
+	@echo "GCP Region for push: $(GCP_REGION_LOCAL)"
+	@echo "Artifact Registry Repo for push: $(API_ARTIFACT_REGISTRY_REPO)"
+	@echo "Full image path for push: $(API_FULL_IMAGE_NAME_WITH_TAG)"
+	@echo ""
+	@echo "Tagging $(API_IMAGE_NAME):$(API_IMAGE_TAG) as $(API_FULL_IMAGE_NAME_WITH_TAG)"
+	docker tag $(API_IMAGE_NAME):$(API_IMAGE_TAG) $(API_FULL_IMAGE_NAME_WITH_TAG)
+	@echo "Pushing API Docker image to $(API_FULL_IMAGE_NAME_WITH_TAG)..."
+	@echo "Ensure you have authenticated Docker with GCP: 'gcloud auth configure-docker $(GCP_REGION_LOCAL)-docker.pkg.dev'"
+	docker push $(API_FULL_IMAGE_NAME_WITH_TAG)
+	@echo "API Image pushed to $(API_FULL_IMAGE_NAME_WITH_TAG)"
+
+# Cloud Run deployment configuration
+# These can be overridden on command line: make api_deploy_cloudrun MODEL_GCS_PATH=gs://my-bucket/model.pth
+MODEL_GCS_PATH ?= gs://team-zeal-models/main/3f941fb_model.pth
+CLOUD_RUN_MEMORY ?= 2Gi
+CLOUD_RUN_CPU ?= 1
+CLOUD_RUN_TIMEOUT ?= 300s
+CLOUD_RUN_PORT ?= 8080
+CLOUD_RUN_MIN_INSTANCES ?= 0
+CLOUD_RUN_MAX_INSTANCES ?= 40
+CLOUD_RUN_SERVICE_ACCOUNT ?= # Leave empty to use default compute service account
+
+## Deploy API to Cloud Run
+.PHONY: api_deploy_cloudrun
+api_deploy_cloudrun:
+	@echo "Creating service account for Cloud Run if it doesn't exist..."
+	-gcloud iam service-accounts create team-zeal-api-sa --display-name="Team Zeal API Service Account"
+
+	@echo "Granting GCS object viewer permissions to service account..."
+	-gcloud projects add-iam-policy-binding $(GCP_PROJECT_ID_LOCAL) --member="serviceAccount:team-zeal-api-sa@$(GCP_PROJECT_ID_LOCAL).iam.gserviceaccount.com" --role="roles/storage.objectViewer"
+
+	@echo "Deploying API to Cloud Run..."
+	@echo "- Service: $(SERVICE_NAME)"
+	@echo "- Image: $(API_FULL_IMAGE_NAME_WITH_TAG)"
+	@echo "- Project: $(GCP_PROJECT_ID_LOCAL)"
+	@echo "- Region: $(GCP_REGION_LOCAL)"
+	@echo "- Model Path: $(MODEL_GCS_PATH)"
+
+	gcloud run deploy $(SERVICE_NAME) \
+		--image $(API_FULL_IMAGE_NAME_WITH_TAG) \
+		--platform managed \
+		--region $(GCP_REGION_LOCAL) \
+		--memory $(CLOUD_RUN_MEMORY) \
+		--cpu $(CLOUD_RUN_CPU) \
+		--timeout $(CLOUD_RUN_TIMEOUT) \
+		--port $(CLOUD_RUN_PORT) \
+		--min-instances $(CLOUD_RUN_MIN_INSTANCES) \
+		--max-instances $(CLOUD_RUN_MAX_INSTANCES) \
+		$(if $(CLOUD_RUN_SERVICE_ACCOUNT),--service-account $(CLOUD_RUN_SERVICE_ACCOUNT)) \
+		--set-env-vars "MODEL_GCS_PATH=$(MODEL_GCS_PATH)" \
+		--allow-unauthenticated
+	@echo "API deployed to Cloud Run. Visit the URL above to access your API."
 # ----------------------------------------------------------------------------- #
 # Host‑side utilities
 # ----------------------------------------------------------------------------- #
