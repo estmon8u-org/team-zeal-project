@@ -435,8 +435,28 @@ gsutil iam ch serviceAccount:YOUR-COMPUTE-SA@your-project.iam.gserviceaccount.co
 
 After deployment, your API will be accessible at a URL like `https://team-zeal-api-run-HASH.run.app`.
 
+## 13. Interactive Web UI (Streamlit on Hugging Face Spaces)
 
-## 13. Contribution Summary
+An interactive web interface for this image classifier is built using Streamlit and deployed on Hugging Face Spaces. This UI allows users to upload images and get predictions by calling the backend API deployed on GCP Cloud Run.
+
+- **Streamlit Application Code:** Located in the `ui_streamlit/` directory.
+- **Live Demo URL:** [https://huggingface.co/spaces/estmon8u/team-zeal-image-classifier](https://huggingface.co/spaces/estmon8u/team-zeal-image-classifier)
+- **Functionality:**
+  - Upload JPG, PNG images.
+  - Displays the uploaded image.
+  - Sends the image to the backend API for classification.
+  - Shows the predicted class, confidence score, and a bar chart of probabilities.
+
+To run the Streamlit app locally (after setting up its requirements and ensuring the backend API is accessible):
+
+```bash
+cd ui_streamlit
+pip install -r requirements.txt
+# Ensure API_URL in streamlit_app.py is correct or PREDICTION_API_URL env var is set
+streamlit run streamlit_app.py
+```
+
+## 14. Contribution Summary
 
 ### PHASE 1 Contributions
 
@@ -456,7 +476,7 @@ After deployment, your API will be accessible at a URL like `https://team-zeal-a
 - **Sajith Bandara:** Refined CML reporting steps, including plot generation and metrics export within the training script. Debugged and optimized CI workflow steps, especially artifact handling and GCS interactions. Contributed to API (`api/main.py`) development for GCS model loading and local testing setup.
 - **Arjun Kumar Sankar Chandrasekar:** Integrated pre-commit hooks (`.pre-commit-config.yaml`). Updated `Makefile` for API targets and refined Docker memory options. Updated project documentation (`README.md`, `PHASE*.md`) to reflect Phase 3 advancements, including CI/CD, CML, and GCP integration details.
 
-## 14. References & Key Tools Used
+## 15. References & Key Tools Used
 
 - **Dataset:** [Imagenette-160 (v2)](https://github.com/fastai/imagenette)
 - **ML Framework:** [PyTorch](https://pytorch.org/)
