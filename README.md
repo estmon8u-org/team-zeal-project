@@ -320,7 +320,65 @@ A FastAPI application is available in the `api/` directory.
 
 - **Deployment (Planned):** The API is structured for potential deployment to serverless platforms like GCP Cloud Run or Cloud Functions.
 
-## 11. Contribution Summary
+## 11. API Deployment to GCP Cloud Functions (2nd Gen)
+
+This project includes a FastAPI application in the `api/` directory for model serving. It can be deployed as a containerized application to GCP Cloud Functions (2nd Generation).
+
+### Prerequisites for API Deployment
+
+1. GCP Project with billing enabled.
+2. Enabled APIs: Cloud Functions, Cloud Build, Artifact Registry, Cloud Run.
+3. `gcloud` CLI authenticated and configured.
+4. Docker installed and authenticated with GCP Artifact Registry (`gcloud auth configure-docker ...`).
+5. A trained model (`.pth` file) uploaded to a GCS bucket.
+
+### Building and Pushing the API Docker Image
+
+The `Makefile` provides targets to build the API's Docker image and push it to GCP Artifact Registry.
+
+```bash
+# Example: Build and push the API image tagged as v1.0.0
+# Ensure GCP_PROJECT_ID_LOCAL and GCP_REGION_LOCAL are correctly set
+# (e.g., by `gcloud config get-value project` or by overriding in the make command)
+make api_docker_push_gcp API_IMAGE_TAG=v1.0.0 API_ARTIFACT_REGISTRY_REPO=team-zeal-project
+```
+
+This will build the image defined in api/Dockerfile and push it to YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/team-zeal-project/team-zeal-project-api:v1.0.0
+
+### Deploying to Cloud Functions
+
+Use the gcloud CLI to deploy the container image as a 2nd Generation Cloud Function.
+
+```bash
+# Define these variables or replace them directly in the command
+export FUNCTION_NAME="team-zeal-classifier-api"
+export GCP_REGION="us-west2" # Your GCP region
+export API_IMAGE_TAG="v1.0.0" # The tag you pushed
+export GCP_PROJECT_ID=$(gcloud config get-value project)
+export API_ARTIFACT_REGISTRY_REPO="team-zeal-project" # Your AR repo name
+export API_IMAGE_NAME="team-zeal-project-api"
+
+# Construct the IMAGE_URI
+export IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${API_ARTIFACT_REGISTRY_REPO}/${API_IMAGE_NAME}:${API_IMAGE_TAG}"
+
+# IMPORTANT: Update this path to your actual model in GCS
+export MODEL_GCS_PATH_FOR_FUNCTION="gs://team-zeal-models/main/your_model_commit_sha.pth"
+
+gcloud functions deploy ${FUNCTION_NAME} \
+  --gen2 \
+  --region=${GCP_REGION} \
+  --runtime=python310 \
+  --source=. \
+  --entry-point=http \
+  --trigger-http \
+  --allow-unauthenticated \
+  --container-image=${IMAGE_URI} \
+  --set-env-vars MODEL_GCS_PATH=${MODEL_GCS_PATH_FOR_FUNCTION} \
+  --memory=2Gi \
+  --timeout=300s
+```
+
+## 12. Contribution Summary
 
 ### PHASE 1 Contributions
 
@@ -340,7 +398,7 @@ A FastAPI application is available in the `api/` directory.
 - **Sajith Bandara:** Refined CML reporting steps, including plot generation and metrics export within the training script. Debugged and optimized CI workflow steps, especially artifact handling and GCS interactions. Contributed to API (`api/main.py`) development for GCS model loading and local testing setup.
 - **Arjun Kumar Sankar Chandrasekar:** Integrated pre-commit hooks (`.pre-commit-config.yaml`). Updated `Makefile` for API targets and refined Docker memory options. Updated project documentation (`README.md`, `PHASE*.md`) to reflect Phase 3 advancements, including CI/CD, CML, and GCP integration details.
 
-## 12. References & Key Tools Used
+## 13. References & Key Tools Used
 
 - **Dataset:** [Imagenette-160 (v2)](https://github.com/fastai/imagenette)
 - **ML Framework:** [PyTorch](https://pytorch.org/)
