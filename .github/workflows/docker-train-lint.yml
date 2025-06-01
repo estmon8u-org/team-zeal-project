@@ -162,10 +162,10 @@ jobs:
             echo "workers=16" >> $GITHUB_OUTPUT
             echo "Running on main branch - full training on large runner (384GB RAM)"
           else
-            echo "epochs=1" >> $GITHUB_OUTPUT
+            echo "epochs=5" >> $GITHUB_OUTPUT
             echo "model=resnet10t" >> $GITHUB_OUTPUT
             echo "batch_size=64" >> $GITHUB_OUTPUT
-            echo "workers=2" >> $GITHUB_OUTPUT
+            echo "workers=6" >> $GITHUB_OUTPUT
             echo "Running on develop branch - quick validation configuration"
           fi
 

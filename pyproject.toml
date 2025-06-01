@@ -34,7 +34,9 @@ dependencies = [
     "torchvision",
     "timm",
     "hydra-core",
-    "pre-commit"
+    "pre-commit",
+    "streamlit"
+
 ]
 requires-python = ">=3.10"
 
