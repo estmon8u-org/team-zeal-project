@@ -157,7 +157,7 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "epochs=10" >> $GITHUB_OUTPUT
-            echo "model=resnot18" >> $GITHUB_OUTPUT
+            echo "model=resnet18" >> $GITHUB_OUTPUT
             echo "batch_size=256" >> $GITHUB_OUTPUT
             echo "workers=16" >> $GITHUB_OUTPUT
             echo "Running on main branch - full training on large runner (384GB RAM)"
