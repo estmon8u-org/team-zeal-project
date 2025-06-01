@@ -22,6 +22,12 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
+# Add permissions section here
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 # Global environment variables to reduce duplication
 env:
   # GCP Configuration
