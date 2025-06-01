@@ -20,6 +20,7 @@ def clean_project(project_root="."):
         "*.log",  # General log files (be careful if you have important logs not in .gitignore)
         "Thumbs.db",  # Windows thumbnail cache
         ".DS_Store",  # macOS custom attributes
+        ".*pth",  # Any models
     ]
 
     # Directories to delete recursively
