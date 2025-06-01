@@ -191,7 +191,7 @@ jobs:
               -e CI_MODE=true \
               ${{ env.DOCKER_MEMORY_OPTS }} \
               "${FULL_IMAGE_PATH}:latest" \
-              make train ARGS="training.epochs=${{ steps.params.outputs.epochs }} model.name=${{ steps.params.outputs.model }} data.dataloader_workers=2 run.device=cpu cml.enabled=true"
+              make train ARGS="training.epochs=${{ steps.params.outputs.epochs }} model.name=${{ steps.params.outputs.model }} data.batch_size=${{ steps.params.outputs.batch_size }} data.dataloader_workers=${{ steps.params.outputs.workers }} run.device=cpu cml.enabled=true"
           else
             echo "Running tests..."
             docker run --rm \
