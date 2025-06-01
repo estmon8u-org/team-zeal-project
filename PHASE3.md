@@ -16,7 +16,7 @@
   - [x] Dockerfile and build/push instructions for Docker Hub and GCP Artifact Registry
 - [x] **2.2 Continuous Machine Learning (CML)**
   - [x] CML integration for automated model training on PRs
-  - [ ] Example CML outputs (metrics, visualizations)
+  - [x] Example CML outputs (metrics, visualizations)
   - [x] Setup and usage documentation
 
 ## 3. Deployment on Google Cloud Platform (GCP)
@@ -37,13 +37,12 @@
   - [X] API Docker image built and pushed to GCP Artifact Registry.
   - [x] Step-by-step deployment guide to GCP Cloud Run using the container image.
   - [x] Instructions for setting environment variables (e.g., `MODEL_GCS_PATH`, `PORT`).
-  - [ ] API testing instructions after deployment.
+  - [x] API testing instructions after deployment.
 - [X] **3.5 Interactive UI Deployment**
   - [X] Streamlit app (`ui_streamlit/streamlit_app.py`) developed to call the Cloud Run API.
   - [X] `ui_streamlit/requirements.txt` created for UI dependencies.
   - [X] Streamlit app deployed to Hugging Face Spaces.
-        *Space URL: `https://team-zeal-api-run-1004281831193.us-west2.run.app/predict/`
-        * `PREDICTION_API_URL` secret configured in Hugging Face Space settings pointing to the deployed Cloud Run API.
+        * Hugging Face Space URL: [https://huggingface.co/spaces/estmon8u/team-zeal-image-classifier](https://huggingface.co/spaces/estmon8u/team-zeal-image-classifier)
   - [ ] Integration of UI deployment into GitHub Actions workflow (SKIPPING)
   - [x] Screenshots and usage examples
 

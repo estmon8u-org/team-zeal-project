@@ -302,8 +302,11 @@ The Space will build and deploy the app.
 
 ### 11.3 Example Screenshots
 
-![Streamlit UI Example 1](./image.png)
-![Streamlit UI Example 2](./image-1.png)
+![Streamlit UI Example 1](./hugging-face-1.png)
+![Streamlit UI Example 2](./hugging-face-2.png)
+![WanDB Dashboard Example](./wandb-dashboard.png)
+![CML Report Example 1](./cml-report-1.png)
+![CML Report Example 2](./cml-report-2.png)
 
 ## 12. Contribution Summary
 
