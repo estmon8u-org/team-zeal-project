@@ -20,6 +20,7 @@ def clean_project(project_root="."):
         "*.log",  # General log files (be careful if you have important logs not in .gitignore)
         "Thumbs.db",  # Windows thumbnail cache
         ".DS_Store",  # macOS custom attributes
+        ".*pth",  # Any models
     ]
 
     # Directories to delete recursively
@@ -31,6 +32,9 @@ def clean_project(project_root="."):
         "dist",  # Common distribution directory
         "htmlcov",  # HTML coverage reports
         "site",  # MkDocs build output (if 'docs/site/' is the pattern)
+        "outputs",  # Custom output directories, adjust as needed
+        "pytorch_profiler_logs",  # Example for PyTorch profiler logs
+        "wandb",  # Weights & Biases logs
         # Add other DVC cache or temp directories if they are not handled by 'dvc gc'
         # and you want 'make clean' to remove them (use with caution for DVC internals).
     ]

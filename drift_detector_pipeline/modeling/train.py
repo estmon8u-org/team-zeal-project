@@ -6,12 +6,14 @@ for performance analysis.
 """
 
 import contextlib  # For conditional context manager
+import json  # For CML metrics export
 import logging
 import os
 import sys
 import time  # For basic timing
 
 import hydra
+import matplotlib.pyplot as plt  # For CML plots
 from omegaconf import DictConfig, OmegaConf
 import timm
 import torch
@@ -48,6 +50,15 @@ def train_model(cfg: DictConfig) -> float:
     script_start_time = time.time()
     log.info("--- Initializing Model Training Script ---")
     log.info("Full configuration:\n%s", OmegaConf.to_yaml(cfg))
+
+    # --- CML Setup ---
+    cml_enabled = cfg.get("cml", {}).get("enabled", False) or cfg.run.get("ci_mode", False)
+    if cml_enabled:
+        log.info("CML reporting enabled - will export metrics and plots")
+        # Create plots directory for CML
+        plots_dir = cfg.get("cml", {}).get("plots_dir", "cml_plots")
+        os.makedirs(plots_dir, exist_ok=True)
+        log.info(f"CML plots will be saved to: {plots_dir}")
 
     # --- 1. Runtime Setup (Device, Seeds) ---
     try:
@@ -312,6 +323,12 @@ def train_model(cfg: DictConfig) -> float:
     model_save_path = "best_model.pth"
     final_model_save_path = "final_model.pth"
 
+    # For CML tracking
+    epoch_train_losses = []
+    epoch_val_losses = []
+    epoch_val_accuracies = []
+    epoch_numbers = []
+
     with pytorch_profiler_instance as prof:
         for epoch in range(cfg.training.epochs):
             epoch_start_time = time.time()
@@ -374,6 +391,10 @@ def train_model(cfg: DictConfig) -> float:
             if wandb_run:
                 wandb.log({"epoch": epoch + 1, "train/epoch_loss": avg_epoch_train_loss})
 
+            # Track for CML
+            epoch_train_losses.append(avg_epoch_train_loss)
+            epoch_numbers.append(epoch + 1)
+
             model.eval()
             running_val_loss = 0.0
             correct_val_predictions = 0
@@ -424,6 +445,10 @@ def train_model(cfg: DictConfig) -> float:
                     }
                 )
 
+            # Track for CML
+            epoch_val_losses.append(avg_val_loss)
+            epoch_val_accuracies.append(val_accuracy)
+
             if val_accuracy > best_val_accuracy:
                 best_val_accuracy = val_accuracy
                 best_epoch = epoch + 1
@@ -463,6 +488,59 @@ def train_model(cfg: DictConfig) -> float:
         log.info(f"Final model state saved to {os.path.abspath(final_model_save_path)}")
     except Exception as e_save_final:
         log.error(f"Error saving final model: {e_save_final}")
+
+    # --- CML Reporting ---
+    if cml_enabled:
+        try:
+            # Create plots directory for CML if not already created
+            plots_dir = cfg.get("cml", {}).get("plots_dir", "cml_plots")
+            os.makedirs(plots_dir, exist_ok=True)
+
+            # Plot training and validation loss
+            plt.figure(figsize=(10, 5))
+            plt.plot(epoch_numbers, epoch_train_losses, "b-", label="Training Loss")
+            plt.plot(epoch_numbers, epoch_val_losses, "r-", label="Validation Loss")
+            plt.xlabel("Epoch")
+            plt.ylabel("Loss")
+            plt.title("Training and Validation Loss")
+            plt.legend()
+            plt.grid(True)
+            loss_plot_path = os.path.join(plots_dir, "loss_plot.png")
+            plt.savefig(loss_plot_path)
+            plt.close()
+            log.info(f"Saved loss plot to {loss_plot_path}")
+
+            # Plot validation accuracy
+            plt.figure(figsize=(10, 5))
+            plt.plot(epoch_numbers, epoch_val_accuracies, "g-", label="Validation Accuracy")
+            plt.xlabel("Epoch")
+            plt.ylabel("Accuracy (%)")
+            plt.title("Validation Accuracy")
+            plt.legend()
+            plt.grid(True)
+            accuracy_plot_path = os.path.join(plots_dir, "accuracy_plot.png")
+            plt.savefig(accuracy_plot_path)
+            plt.close()
+            log.info(f"Saved accuracy plot to {accuracy_plot_path}")
+
+            # Export metrics to JSON for CML reporting
+            metrics_file = cfg.get("cml", {}).get("metrics_file", "cml_metrics.json")
+            metrics_data = {
+                "best_val_accuracy": float(best_val_accuracy),
+                "best_epoch": int(best_epoch),
+                "final_train_loss": float(epoch_train_losses[-1]),
+                "final_val_loss": float(epoch_val_losses[-1]),
+                "final_val_accuracy": float(epoch_val_accuracies[-1]),
+                "total_training_time_sec": float(total_training_duration),
+                "model_name": cfg.model.name,
+                "epochs_completed": len(epoch_numbers),
+            }
+            with open(metrics_file, "w") as f:
+                json.dump(metrics_data, f, indent=2)
+            log.info(f"Exported metrics to {metrics_file}")
+
+        except Exception as e_cml:
+            log.error(f"Error during CML reporting: {e_cml}")
 
     if wandb_run:
         wandb.summary["best_val_accuracy"] = best_val_accuracy

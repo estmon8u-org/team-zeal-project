@@ -9,6 +9,7 @@ data:
 
 # --- Model Parameters ---
 model:
+  # Available models: https://timm.fast.ai/?utm_source=chatgpt.com#List-Models-with-Pretrained-Weights
   name: "resnet18"       # Name of the model from timm
   pretrained: True       # Load ImageNet pre-trained weights
   num_classes: 10        # Number of classes in Imagenette
@@ -34,11 +35,11 @@ training:
       repeat: 1                # Number of (wait, warmup, active) cycles to perform.
     # Set to 0 to profile for the entire `active` duration once, without repeating cycles.
                               # If > 0, profiler will cycle through wait, warmup, active for `repeat` times.
-      
+
       # Output and trace parameters
       log_dir: "pytorch_profiler_logs" # Subdirectory within Hydra's output directory for trace files
       export_chrome_trace: true  # Essential for viewing with TensorBoard or Perfetto UI
-      
+
       # Optional detail levels (can add significant overhead, use judiciously)
       record_shapes: false     # Records shapes of operator inputs
       profile_memory: false    # Tracks tensor memory allocations and deallocations
@@ -49,12 +50,18 @@ run:
   seed: 42               # Random seed for reproducibility
   device: "cuda"         # Target device: "cuda" or "cpu"
 
+# --- CML Parameters (For Continuous ML Reporting) ---
+cml:
+  enabled: false         # Set to true to enable CML reporting
+  plots_dir: "cml_plots"  # Directory for CML plots
+  metrics_file: "cml_metrics.json"  # File to store metrics for CML
+
 # --- Experiment Tracking (WandB) ---
 wandb:
   project: "zeal-imagenette-drift"  # Your WandB project name
   entity: "emontel1-depaul-university" # Optional: Your WandB username or team name
   log_freq: 100                   # Log metrics every N batches
- 
+
 
 # --- Hydra Settings (Defaults are usually fine) ---
 hydra:
