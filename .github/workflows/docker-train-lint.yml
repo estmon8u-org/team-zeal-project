@@ -34,8 +34,8 @@ env:
   GCP_REGION: us-west2
   ARTIFACT_REGISTRY_REPO: team-zeal-project
   IMAGE_NAME: team-zeal-project
-  # Docker resource limits for consistent container execution
-  DOCKER_MEMORY_OPTS: "--memory=8g --memory-swap=8g --shm-size=4g"
+  # Dynamic Docker resource limits - smaller for branches, larger for main
+  DOCKER_MEMORY_OPTS: ${{ github.ref == 'refs/heads/main' && '--memory=350g --memory-swap=360g --shm-size=128g' || '--memory=8g --memory-swap=8g --shm-size=4g' }}
 
 jobs:
   ###############################################################################
@@ -123,8 +123,8 @@ jobs:
     needs: build  # Requires the Docker image to be built
     runs-on:
       group: default
-      labels: ubuntu-latest-m
-    timeout-minutes: 240  # 4 hours max (training can be long)
+      labels: ${{ matrix.task == 'train' && github.ref == 'refs/heads/main' && 'ubuntu-latest-l' || 'ubuntu-latest-m' }}
+    timeout-minutes: ${{ matrix.task == 'train' && github.ref == 'refs/heads/main' && 480 || 240 }}  # 8 hours for main training, 4 hours otherwise
     strategy:
       matrix:
         task: [train, test]  # Run both tasks in parallel
@@ -157,11 +157,15 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "epochs=10" >> $GITHUB_OUTPUT
-            echo "model=resnet18" >> $GITHUB_OUTPUT
-            echo "Running on main branch - full training configuration"
+            echo "model=resnot18" >> $GITHUB_OUTPUT
+            echo "batch_size=256" >> $GITHUB_OUTPUT
+            echo "workers=16" >> $GITHUB_OUTPUT
+            echo "Running on main branch - full training on large runner (384GB RAM)"
           else
             echo "epochs=1" >> $GITHUB_OUTPUT
             echo "model=resnet10t" >> $GITHUB_OUTPUT
+            echo "batch_size=64" >> $GITHUB_OUTPUT
+            echo "workers=2" >> $GITHUB_OUTPUT
             echo "Running on develop branch - quick validation configuration"
           fi
 
