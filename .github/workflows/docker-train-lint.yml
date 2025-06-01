@@ -203,9 +203,23 @@ jobs:
               make test
           fi
 
+        # Upload the best model to GCP bucket for persistence
+      - name: Upload model to GCP
+        if: matrix.task == 'train' && success()
+        run: |
+          MODEL_BUCKET="gs://team-zeal-models"
+          MODEL_PATH="${MODEL_BUCKET}/${GITHUB_REF_NAME}/${GITHUB_SHA::7}_model.pth"
+
+          echo "Checking if model bucket exists..."
+          gsutil ls $MODEL_BUCKET || gsutil mb -p ${{ secrets.GCP_PROJECT_ID }} -l ${{ env.GCP_REGION }} $MODEL_BUCKET
+
+          echo "Uploading production model to GCS..."
+          gsutil cp best_model.pth $MODEL_PATH
+          echo "Model uploaded to: $MODEL_PATH"
+
       # Upload training artifacts for CML reporting
       - name: Upload training metrics and plots for CML
-        if: matrix.task == 'train' && success()
+        if: matrix.task == 'train' && success() && github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: cml-artifacts
@@ -216,12 +230,12 @@ jobs:
 
       # Setup CML for report generation (moved from separate workflow)
       - name: Setup CML
-        if: matrix.task == 'train' && success()
+        if: matrix.task == 'train' && success() && github.event_name == 'pull_request'
         uses: iterative/setup-cml@v2
 
       # Generate and post CML report (integrated from cml-report.yml)
       - name: Generate and Post CML Report
-        if: matrix.task == 'train' && success()
+        if: matrix.task == 'train' && success() && github.event_name == 'pull_request'
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -300,17 +314,3 @@ jobs:
           fi
 
           echo " CML report posted successfully!"
-
-      # Upload the best model to GCP bucket for persistence
-      - name: Upload model to GCP
-        if: matrix.task == 'train' && success()
-        run: |
-          MODEL_BUCKET="gs://team-zeal-models"
-          MODEL_PATH="${MODEL_BUCKET}/${GITHUB_REF_NAME}/${GITHUB_SHA::7}_model.pth"
-
-          echo "Checking if model bucket exists..."
-          gsutil ls $MODEL_BUCKET || gsutil mb -p ${{ secrets.GCP_PROJECT_ID }} -l ${{ env.GCP_REGION }} $MODEL_BUCKET
-
-          echo "Uploading production model to GCS..."
-          gsutil cp best_model.pth $MODEL_PATH
-          echo "Model uploaded to: $MODEL_PATH"
