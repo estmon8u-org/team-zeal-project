@@ -146,9 +146,11 @@ curl -X POST -F "file=@/path/to/your/test_image.jpg" $FUNCTION_URL/predict/
 - If you encounter "Container failed to start" errors, check the Cloud Function logs in GCP. Common issues include incorrect `PORT` handling in the Docker container, missing dependencies, or insufficient memory/CPU.
 - The `MODEL_GCS_PATH` must be accurate and the Cloud Function's runtime service account must have permission to read from that GCS bucket. By default, 2nd gen functions use the Compute Engine default service account, which often has broad read access within the project, but it's good practice to use more granular permissions with dedicated service accounts in production.
 
-- [ ] **3.4 Dockerize & Deploy Model with GCP Cloud Run**
-  - [ ] Containerization and deployment steps
-  - [ ] Testing and result documentation
+- [X] **3.4 Dockerize & Deploy Model with GCP Cloud Run**
+  - [X] API Docker image built and pushed to GCP Artifact Registry.
+  - [X] Step-by-step deployment guide to GCP Cloud Run using the container image.
+  - [X] Instructions for setting environment variables (e.g., `MODEL_GCS_PATH`, `PORT`) handled in `gcloud` command.
+  - [X] API testing instructions after deployment. Verified with live URL: `https://team-zeal-api-run-your-hash.us-west2.run.app` (example URL)
 - [ ] **3.5 Interactive UI Deployment**
   - [ ] Streamlit or Gradio app for model demonstration
   - [ ] Deployment on Hugging Face platform

@@ -28,7 +28,7 @@ if not logger.hasHandlers():  # Add handler only if no handlers are configured
     logger.propagate = False  # Avoid duplicate logs if root logger is also configured
 
 # --- Configuration ---
-MODEL_NAME = "resnet10t"  # Should match the model architecture saved
+MODEL_NAME = "resnet18"  # Should match the model architecture saved
 NUM_CLASSES = 10  # Imagenette
 IMG_SIZE = 224  # As used in your training
 
@@ -43,6 +43,20 @@ model_instance = None  # Renamed to avoid conflict with 'model' module/variable
 api_transforms = None
 
 app = FastAPI(title="Team Zeal Image Classifier API (GCS Model)")
+
+
+# Add this function after your imports or helper functions
+def clear_model_cache():
+    """Clear cached model files to force a fresh download from GCS."""
+    try:
+        if os.path.exists(LOCAL_MODEL_PATH):
+            logger.info(f"Clearing cached model at {LOCAL_MODEL_PATH}")
+            os.remove(LOCAL_MODEL_PATH)
+            logger.info("Model cache cleared successfully")
+        else:
+            logger.info("No cached model found to clear")
+    except Exception as e:
+        logger.error(f"Failed to clear model cache: {e}")
 
 
 def get_api_transforms(img_size: int) -> transforms.Compose:
@@ -223,7 +237,21 @@ async def predict_image_endpoint(file: UploadFile = File(...)) -> Dict:
 
 # For local testing with uvicorn
 if __name__ == "__main__":
+    import argparse
+
     import uvicorn
+
+    # Add command line argument parsing
+    parser = argparse.ArgumentParser(description="Team Zeal Image Classifier API")
+    parser.add_argument(
+        "--clear-cache", action="store_true", help="Clear model cache before starting"
+    )
+    args = parser.parse_args()
+
+    # Check if cache clearing is requested via command line or environment variable
+    if args.clear_cache or os.getenv("CLEAR_MODEL_CACHE", "").lower() in ("true", "1", "yes"):
+        logger.info("Clearing model cache as requested...")
+        clear_model_cache()
 
     # For local test, manually set env vars if needed:
     # Example: export MODEL_GCS_PATH="gs://your-bucket/path/to/your_model.pth"

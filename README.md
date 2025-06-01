@@ -271,11 +271,11 @@ The PyTorch Profiler is integrated into `drift_detector_pipeline/modeling/train.
 
 A GitHub Actions workflow (`.github/workflows/docker-train-lint.yml`) automates:
 
-1. **Code Linting & Formatting Checks:** Uses Ruff.
+1. **Code Linting & Formatting Checks:** Uses Ruff for code quality enforcement.
 2. **Docker Image Build & Push:** Builds the project's Docker image and pushes it to GCP Artifact Registry, tagged with `latest`, `ci`, and the Git commit SHA.
 3. **Automated Training & Testing:**
     - Pulls the Docker image from GCP Artifact Registry.
-    - Runs a training job inside the container. For `main` branch, it runs more epochs; for `develop` or PRs, it runs a shorter validation (e.g., 1 epoch).
+    - Runs a training job inside the container. For `main` branch, it runs more epochs; for `develop` or PRs, it runs a shorter validation.
     - Pulls data using DVC (authenticating to Google Drive via service account secrets).
     - Logs metrics to Weights & Biases.
     - Runs unit tests using Pytest within the container.
@@ -317,8 +317,6 @@ A FastAPI application is available in the `api/` directory.
     make api_docker_build
     # docker run -p 8008:8008 -e MODEL_GCS_PATH="gs://..." team-zeal-api:latest
     ```
-
-- **Deployment (Planned):** The API is structured for potential deployment to serverless platforms like GCP Cloud Run or Cloud Functions.
 
 ## 11. API Deployment to GCP Cloud Functions (2nd Gen)
 
@@ -378,7 +376,67 @@ gcloud functions deploy ${FUNCTION_NAME} \
   --timeout=300s
 ```
 
-## 12. Contribution Summary
+## 12. API Deployment to GCP Cloud Run
+
+You can deploy the API container to Cloud Run for scalable serving:
+
+```bash
+make api_deploy_cloudrun
+```
+
+This Makefile target:
+
+1. Creates a service account for the Cloud Run service if it doesn't exist
+2. Grants necessary GCS permissions to access the model
+3. Deploys the API container to Cloud Run with appropriate settings
+4. Sets environment variables including the MODEL_GCS_PATH
+
+### Customizing Cloud Run Deployment
+
+The deployment can be customized with various parameters:
+
+```bash
+# Specify a different project or GCP region
+make api_deploy_cloudrun GCP_PROJECT_ID_LOCAL=for-copying-332923 GCP_REGION_LOCAL=us-central1
+
+# Use a different model path in GCS
+make api_deploy_cloudrun MODEL_GCS_PATH=gs://team-zeal-models/dev/latest_model.pth
+
+# Adjust Cloud Run resource allocation
+make api_deploy_cloudrun CLOUD_RUN_MEMORY=4Gi CLOUD_RUN_CPU=2
+
+# Configure scaling behavior
+make api_deploy_cloudrun CLOUD_RUN_MIN_INSTANCES=1 CLOUD_RUN_MAX_INSTANCES=10
+
+# Use a custom service account
+make api_deploy_cloudrun CLOUD_RUN_SERVICE_ACCOUNT=custom-sa@project-id.iam.gserviceaccount.com
+
+# Combine multiple options
+make api_deploy_cloudrun GCP_PROJECT_ID_LOCAL=for-copying-332923 \
+  MODEL_GCS_PATH=gs://team-zeal-models/main/special_model.pth \
+  CLOUD_RUN_MEMORY=4Gi \
+  CLOUD_RUN_MIN_INSTANCES=1
+```
+
+### Troubleshooting Deployment
+
+If you encounter permission issues with the service account, you can deploy without specifying a custom service account:
+
+```bash
+# Deploy using the default Compute Engine service account
+make api_deploy_cloudrun WITHOUT_SA=1 GCP_PROJECT_ID_LOCAL=for-copying-332923
+```
+
+Make sure to grant GCS access to whichever service account is being used:
+
+```bash
+gsutil iam ch serviceAccount:YOUR-COMPUTE-SA@your-project.iam.gserviceaccount.com:objectViewer gs://team-zeal-models
+```
+
+After deployment, your API will be accessible at a URL like `https://team-zeal-api-run-HASH.run.app`.
+
+
+## 13. Contribution Summary
 
 ### PHASE 1 Contributions
 
@@ -398,7 +456,7 @@ gcloud functions deploy ${FUNCTION_NAME} \
 - **Sajith Bandara:** Refined CML reporting steps, including plot generation and metrics export within the training script. Debugged and optimized CI workflow steps, especially artifact handling and GCS interactions. Contributed to API (`api/main.py`) development for GCS model loading and local testing setup.
 - **Arjun Kumar Sankar Chandrasekar:** Integrated pre-commit hooks (`.pre-commit-config.yaml`). Updated `Makefile` for API targets and refined Docker memory options. Updated project documentation (`README.md`, `PHASE*.md`) to reflect Phase 3 advancements, including CI/CD, CML, and GCP integration details.
 
-## 13. References & Key Tools Used
+## 14. References & Key Tools Used
 
 - **Dataset:** [Imagenette-160 (v2)](https://github.com/fastai/imagenette)
 - **ML Framework:** [PyTorch](https://pytorch.org/)
